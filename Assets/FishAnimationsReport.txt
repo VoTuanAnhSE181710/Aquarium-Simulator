@@ -1,0 +1,41 @@
+=== FISH ANIMATIONS INSPECTION REPORT ===
+Checked at: 6/16/2026 8:15:34 AM
+
+File: Assets/Fishes/CaDo.fbx
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+
+File: Assets/Fishes/CaDori.fbx
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: '__preview__Armature|Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+
+File: Assets/Fishes/Cahe.fbx
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction.001' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction.001' | Duration: 2.00s | Loop: False
+
+File: Assets/Fishes/Calahan.fbx
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction.001' | Duration: 2.00s | Loop: False
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction.002' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction.001' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction.002' | Duration: 2.00s | Loop: False
+
+File: Assets/Fishes/CaRong.fbx
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction.001' | Duration: 2.00s | Loop: False
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction.002' | Duration: 2.00s | Loop: False
+  - Clip Name: '__preview__Armature|Armature|ArmatureAction.003' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction.001' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction.002' | Duration: 2.00s | Loop: False
+  - Clip Name: 'Armature|Armature|ArmatureAction.003' | Duration: 2.00s | Loop: False
+
+File: Assets/Fishes/CaVang.fbx
+  - Clip Name: '__preview__Fish Animation|Fish Animation|Fish AnimationAction' | Duration: 1.83s | Loop: False
+  - Clip Name: 'Fish Animation|Fish Animation|Fish AnimationAction' | Duration: 1.83s | Loop: False
+
