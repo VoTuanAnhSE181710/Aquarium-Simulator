@@ -6,7 +6,7 @@ public sealed class GameClockDisplay : MonoBehaviour
     [SerializeField] private DayNightCycle dayNightCycle;
     [SerializeField] private bool showPeriodLabel = true;
     [SerializeField] private Vector2 screenOffset = new(20f, 20f);
-    [SerializeField] private Vector2 clockSize = new(180f, 48f);
+    [SerializeField] private Vector2 clockSize = new(200f, 64f);
 
     private GUIStyle clockStyle;
 
@@ -54,9 +54,12 @@ public sealed class GameClockDisplay : MonoBehaviour
         int hour = (totalMinutes / 60) % 24;
         int minute = totalMinutes % 60;
         bool isNight = hour < 6 || hour >= 18;
-        string label = showPeriodLabel
-            ? $"{hour:00}:{minute:00} {(isNight ? "Night" : "Day")}"
+        string clockLabel = showPeriodLabel
+            ? $"{hour:00}:{minute:00} {(isNight ? "Đêm" : "Ngày")}"
             : $"{hour:00}:{minute:00}";
+        string label = dayNightCycle != null
+            ? $"{dayNightCycle.CurrentDateLabel}\n{clockLabel}"
+            : clockLabel;
 
         Rect rect = new(
             Screen.width - clockSize.x - screenOffset.x,

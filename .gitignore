@@ -1,42 +1,64 @@
+# Unity generated
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
+[Mm]emoryCaptures/
+[Rr]ecordings/
 [Uu]ser[Ss]ettings/
 
-# Node.js
-node_modules/
-
-# .NET (C#)
-bin/
-obj/
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
+# IDE / generated project files
 .vs/
 .vscode/
+.idea/
 *.csproj
 *.sln
+*.slnx
 *.user
 *.userprefs
 *.pidb
 *.booproj
 *.svd
-*.pdb
+*.opendb
+*.VC.db
 
-*.apk
-*.aab
-*.exe
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Package / export / archive outputs
+*.unitypackage
 *.zip
 *.rar
 *.7z
+*.apk
+*.aab
+*.exe
+
+# Video / capture exports
 *.mp4
 *.mov
+*.avi
 
-*.tif
+# Large source formats that should not be committed by default
 *.psd
 *.blend
+*.tif
+
+# Node / misc tooling
+node_modules/
+
+# Local scene backups / recovery
+Assets/_Recovery/
+Assets/Scenes/*_Local.unity
+Assets/Scenes/*_Local.unity.meta
+Assets/Scenes/*Recovery*.unity
+Assets/Scenes/*Recovery*.unity.meta
+
+# Local reports / temp artifacts
+Assets/AssetCleanupReport.txt
+Temp/CodexDownloads/
+Temp/CodexReports/

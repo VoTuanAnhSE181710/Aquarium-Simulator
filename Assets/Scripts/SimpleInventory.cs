@@ -284,6 +284,7 @@ public sealed class SimpleInventory : MonoBehaviour
         }
 
         pickup.Configure(item.Name, item.Color, item.DropPrefab);
+        pickup.EnableDroppedPhysics();
         slots[selectedSlot] = null;
         RefreshCarriedItemVisual();
         return pickup != null;

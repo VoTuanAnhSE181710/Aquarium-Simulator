@@ -15,18 +15,23 @@ public sealed class InventoryPickupItem : MonoBehaviour
         itemName = string.IsNullOrWhiteSpace(displayName) ? gameObject.name : displayName;
         itemColor = color;
         dropPrefab = prefab;
-        EnsurePickupPhysics();
+        EnsurePickupPhysics(false);
+    }
+
+    public void EnableDroppedPhysics()
+    {
+        EnsurePickupPhysics(true);
     }
 
     private void Reset()
     {
         itemName = gameObject.name;
-        EnsurePickupPhysics();
+        EnsurePickupPhysics(false);
     }
 
     private void Awake()
     {
-        EnsurePickupPhysics();
+        EnsurePickupPhysics(false);
     }
 
     public SimpleInventory.InventoryItem CreateInventoryItem()
@@ -43,9 +48,9 @@ public sealed class InventoryPickupItem : MonoBehaviour
         return new SimpleInventory.InventoryItem(ItemName, itemColor, dropPrefab, sceneTemplate, transform.rotation);
     }
 
-    private void EnsurePickupPhysics()
+    private void EnsurePickupPhysics(bool useDynamicPhysics)
     {
-        gameObject.isStatic = false;
+        SetStaticRecursively(transform, false);
 
         if (GetComponent<Collider>() == null)
         {
@@ -66,12 +71,27 @@ public sealed class InventoryPickupItem : MonoBehaviour
         }
 
         rigidbody.mass = 1f;
-        rigidbody.isKinematic = true;
+        rigidbody.useGravity = useDynamicPhysics;
+        rigidbody.isKinematic = !useDynamicPhysics;
         rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+
+        if (useDynamicPhysics)
+        {
+            rigidbody.WakeUp();
+        }
     }
 
     private static Vector3 AbsVector(Vector3 value)
     {
         return new Vector3(Mathf.Abs(value.x), Mathf.Abs(value.y), Mathf.Abs(value.z));
+    }
+
+    private static void SetStaticRecursively(Transform root, bool isStatic)
+    {
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            child.gameObject.isStatic = isStatic;
+        }
     }
 }

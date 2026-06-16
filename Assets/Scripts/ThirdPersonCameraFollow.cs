@@ -4,6 +4,8 @@ using UnityEngine.InputSystem;
 public sealed class ThirdPersonCameraFollow : MonoBehaviour
 {
     [SerializeField] private Transform target;
+    [SerializeField] private Transform playerBody;
+    [SerializeField] private bool firstPerson;
     [SerializeField] private Vector3 targetOffset = new Vector3(0f, 1.8f, 0f);
     [SerializeField] private float distance = 5f;
     [SerializeField] private float mouseSensitivity = 0.12f;
@@ -31,7 +33,13 @@ public sealed class ThirdPersonCameraFollow : MonoBehaviour
             }
         }
 
+        if (playerBody == null && target != null)
+        {
+            playerBody = target.root;
+        }
+
         yaw = transform.eulerAngles.y;
+        SnapToTarget();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -51,6 +59,12 @@ public sealed class ThirdPersonCameraFollow : MonoBehaviour
             pitch = Mathf.Clamp(pitch - mouseDelta.y * mouseSensitivity, -20f, 70f);
         }
 
+        if (firstPerson)
+        {
+            ApplyFirstPersonCamera();
+            return;
+        }
+
         Quaternion orbitRotation = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 pivot = target.position + targetOffset;
         Vector3 cameraDirection = orbitRotation * Vector3.back;
@@ -63,6 +77,44 @@ public sealed class ThirdPersonCameraFollow : MonoBehaviour
             ref positionVelocity,
             positionSmoothTime);
         transform.LookAt(pivot);
+    }
+
+    private void ApplyFirstPersonCamera()
+    {
+        Vector3 pivot = target.position + targetOffset;
+        transform.position = pivot;
+        transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        positionVelocity = Vector3.zero;
+
+        if (playerBody != null)
+        {
+            playerBody.rotation = Quaternion.Euler(0f, yaw, 0f);
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (target != null)
+        {
+            SnapToTarget();
+        }
+    }
+
+    private void SnapToTarget()
+    {
+        if (firstPerson)
+        {
+            ApplyFirstPersonCamera();
+            return;
+        }
+
+        Quaternion orbitRotation = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 pivot = target.position + targetOffset;
+        Vector3 cameraDirection = orbitRotation * Vector3.back;
+
+        transform.position = pivot + cameraDirection * distance;
+        transform.LookAt(pivot);
+        positionVelocity = Vector3.zero;
     }
 
     private float GetAdjustedDistance(Vector3 pivot, Vector3 cameraDirection)

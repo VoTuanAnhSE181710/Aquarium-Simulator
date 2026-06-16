@@ -5,10 +5,26 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(Light))]
 public sealed class DayNightCycle : MonoBehaviour
 {
+    public enum WeekDay
+    {
+        Monday,
+        Tuesday,
+        Wednesday,
+        Thursday,
+        Friday,
+        Saturday,
+        Sunday
+    }
+
     [Header("Time")]
     [SerializeField, Min(1f)] private float fullDayDurationSeconds = 7200f;
-    [SerializeField, Range(0f, 24f)] private float startTimeOfDay = 8f;
+    [SerializeField, Range(0f, 24f)] private float startTimeOfDay = 6f;
     [SerializeField] private bool runCycle = true;
+
+    [Header("Calendar")]
+    [SerializeField, Min(1)] private int startDay = 1;
+    [SerializeField, Range(1, 12)] private int startMonth = 9;
+    [SerializeField] private WeekDay startWeekDay = WeekDay.Monday;
 
     [Header("Sun")]
     [SerializeField] private float sunAzimuth = 170f;
@@ -39,14 +55,44 @@ public sealed class DayNightCycle : MonoBehaviour
     private Light sunLight;
     private ControlledLight[] artificialLights;
     private float currentTimeOfDay;
+    private int currentDay;
+    private int currentMonth;
+    private WeekDay currentWeekDay;
 
     public float CurrentTimeOfDay => currentTimeOfDay;
+    public int CurrentDay => currentDay;
+    public int CurrentMonth => currentMonth;
+    public WeekDay CurrentWeekDay => currentWeekDay;
+    public bool IsSchoolDay => currentWeekDay >= WeekDay.Monday && currentWeekDay <= WeekDay.Friday;
+    public string CurrentWeekDayLabel => GetWeekDayLabel(currentWeekDay);
+    public string CurrentDateLabel => $"{CurrentWeekDayLabel} {currentDay:00}/{currentMonth:00}";
+
+    public void SkipHours(float hours)
+    {
+        AddGameHours(hours);
+        ApplyLighting();
+    }
+
+    public void SetTimeOfDay(float timeOfDay)
+    {
+        float normalizedTime = Mathf.Repeat(timeOfDay, 24f);
+        if (normalizedTime < currentTimeOfDay)
+        {
+            AdvanceDay();
+        }
+
+        currentTimeOfDay = normalizedTime;
+        ApplyLighting();
+    }
 
     private void Awake()
     {
         sunLight = GetComponent<Light>();
         RenderSettings.sun = sunLight;
         currentTimeOfDay = Mathf.Repeat(startTimeOfDay, 24f);
+        currentDay = Mathf.Max(1, startDay);
+        currentMonth = Mathf.Clamp(startMonth, 1, 12);
+        currentWeekDay = startWeekDay;
         CacheArtificialLights();
         ApplyLighting();
     }
@@ -56,12 +102,40 @@ public sealed class DayNightCycle : MonoBehaviour
         if (runCycle)
         {
             float gameHoursPerSecond = 24f / Mathf.Max(fullDayDurationSeconds, 1f);
-            currentTimeOfDay = Mathf.Repeat(
-                currentTimeOfDay + Time.deltaTime * gameHoursPerSecond,
-                24f);
+            AddGameHours(Time.deltaTime * gameHoursPerSecond);
         }
 
         ApplyLighting();
+    }
+
+    private void AddGameHours(float hours)
+    {
+        float remainingHours = Mathf.Max(0f, hours);
+        while (remainingHours > 0f)
+        {
+            float hoursUntilTomorrow = 24f - currentTimeOfDay;
+            if (remainingHours < hoursUntilTomorrow)
+            {
+                currentTimeOfDay += remainingHours;
+                return;
+            }
+
+            remainingHours -= hoursUntilTomorrow;
+            currentTimeOfDay = 0f;
+            AdvanceDay();
+        }
+    }
+
+    private void AdvanceDay()
+    {
+        currentDay++;
+        if (currentDay > GetDaysInMonth(currentMonth))
+        {
+            currentDay = 1;
+            currentMonth = currentMonth == 12 ? 1 : currentMonth + 1;
+        }
+
+        currentWeekDay = (WeekDay)(((int)currentWeekDay + 1) % 7);
     }
 
     private void ApplyLighting()
@@ -140,5 +214,44 @@ public sealed class DayNightCycle : MonoBehaviour
 
         public Light Light { get; }
         public float BaseIntensity { get; }
+    }
+
+    private static int GetDaysInMonth(int month)
+    {
+        switch (month)
+        {
+            case 2:
+                return 28;
+            case 4:
+            case 6:
+            case 9:
+            case 11:
+                return 30;
+            default:
+                return 31;
+        }
+    }
+
+    private static string GetWeekDayLabel(WeekDay weekDay)
+    {
+        switch (weekDay)
+        {
+            case WeekDay.Monday:
+                return "T2";
+            case WeekDay.Tuesday:
+                return "T3";
+            case WeekDay.Wednesday:
+                return "T4";
+            case WeekDay.Thursday:
+                return "T5";
+            case WeekDay.Friday:
+                return "T6";
+            case WeekDay.Saturday:
+                return "T7";
+            case WeekDay.Sunday:
+                return "CN";
+            default:
+                return "T2";
+        }
     }
 }

@@ -14,8 +14,15 @@ public sealed class MinhThirdPersonController : MonoBehaviour
     private const string CharacterHouseFallbackDoorPath = "Floors/Door";
     private const string RoomDoorPlaqueName = "DoorNumberPlaque_07";
     private const string RoomDoorMeshName = "WallDoor";
+    private const string CameraTargetName = "Camera Target";
 
     [SerializeField] private Transform cameraTransform;
+    [SerializeField] private bool useFirstPersonCamera = true;
+    [SerializeField] private Transform firstPersonCameraTarget;
+    [SerializeField] private Vector3 firstPersonCameraOffset = Vector3.zero;
+    [SerializeField] private float mouseSensitivity = 0.12f;
+    [SerializeField] private float minPitch = -70f;
+    [SerializeField] private float maxPitch = 70f;
     [SerializeField] private float moveSpeed = 4f;
     [SerializeField] private float runSpeed = 6.5f;
     [SerializeField] private float speedChangeRate = 10f;
@@ -28,9 +35,28 @@ public sealed class MinhThirdPersonController : MonoBehaviour
     [SerializeField] private float teleportLandingOffset = 1.1f;
     [SerializeField] private float houseDoorInteractionDistance = 3.2f;
     [SerializeField] private float houseExitLandingOffset = 1.3f;
+    [SerializeField] private float bedInteractionDistance = 2.4f;
+    [SerializeField] private float sleepSkipHours = 6f;
+    [SerializeField] private DayNightCycle dayNightCycle;
     [SerializeField] private float walkingReleaseGraceTime = 0.08f;
     [SerializeField] private string roomDoorPrompt = "Press F to come in";
     [SerializeField] private string houseDoorPrompt = "Press F to get out";
+    [SerializeField] private string sleepPrompt = "Press F to sleep";
+
+    [Header("Movement Audio")]
+    [SerializeField] private AudioSource movementAudioSource;
+    [SerializeField] private AudioClip[] walkFootstepClips;
+    [SerializeField] private AudioClip[] runFootstepClips;
+    [SerializeField] private AudioClip walkFootstepClip;
+    [SerializeField] private AudioClip runFootstepClip;
+    [SerializeField] private AudioClip jumpClip;
+    [SerializeField] private AudioClip landingClip;
+    [SerializeField] private float walkStepInterval = 0.48f;
+    [SerializeField] private float runStepInterval = 0.32f;
+    [SerializeField, Range(0f, 1f)] private float footstepVolume = 0.34f;
+    [SerializeField, Range(0f, 1f)] private float jumpVolume = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float landingVolume = 0.42f;
+    [SerializeField] private float minLandingSoundVelocity = 4f;
 
     private CharacterController characterController;
     private float currentMoveSpeed;
@@ -39,11 +65,20 @@ public sealed class MinhThirdPersonController : MonoBehaviour
     private Transform roomDoorMesh;
     private Transform characterHouseRoot;
     private Transform characterHouseDoor;
+    private Transform bedTarget;
     private bool canEnterCharacterHouse;
     private bool canExitCharacterHouse;
+    private bool canSleep;
     private GUIStyle promptStyle;
     private Animator animator;
     private float lastMovementInputTime = float.NegativeInfinity;
+    private float cameraYaw;
+    private float cameraPitch;
+    private bool wasGrounded;
+    private float nextFootstepTime;
+    private float previousVerticalVelocity;
+    private int nextWalkFootstepIndex;
+    private int nextRunFootstepIndex;
 
     public void SetCameraTransform(Transform newCameraTransform)
     {
@@ -55,10 +90,19 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         currentMoveSpeed = moveSpeed;
+        wasGrounded = characterController.isGrounded;
+        EnsureMovementAudio();
 
         if (cameraTransform == null && Camera.main != null)
         {
             cameraTransform = Camera.main.transform;
+        }
+
+        CacheFirstPersonCameraTarget();
+        InitializeFirstPersonCamera();
+        if (dayNightCycle == null)
+        {
+            dayNightCycle = FindFirstObjectByType<DayNightCycle>();
         }
 
         CacheSceneTargets();
@@ -72,9 +116,11 @@ public sealed class MinhThirdPersonController : MonoBehaviour
             return;
         }
 
+        UpdateFirstPersonLook();
         CacheSceneTargets();
         canEnterCharacterHouse = CanInteractWithCharacterHouseDoor();
         canExitCharacterHouse = CanInteractWithMainHouseDoor();
+        canSleep = CanInteractWithBed();
 
         if (keyboard.fKey.wasPressedThisFrame && TryTeleportToCharacterHouse())
         {
@@ -83,6 +129,12 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         }
 
         if (keyboard.fKey.wasPressedThisFrame && TryTeleportBackToRoomDoor())
+        {
+            SetWalking(false);
+            return;
+        }
+
+        if (keyboard.fKey.wasPressedThisFrame && TrySleep())
         {
             SetWalking(false);
             return;
@@ -108,7 +160,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         Vector3 cameraRight = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up).normalized;
         Vector3 movement = (cameraForward * input.y + cameraRight * input.x).normalized;
 
-        if (hasMovementInput)
+        if (!useFirstPersonCamera && hasMovementInput)
         {
             Quaternion targetRotation = Quaternion.LookRotation(movement, Vector3.up);
             transform.rotation = Quaternion.RotateTowards(
@@ -124,6 +176,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
             if (keyboard.spaceKey.wasPressedThisFrame)
             {
                 verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                PlayMovementSound(jumpClip, jumpVolume);
             }
         }
         else
@@ -133,6 +186,80 @@ public sealed class MinhThirdPersonController : MonoBehaviour
 
         Vector3 velocity = movement * currentMoveSpeed + Vector3.up * verticalVelocity;
         characterController.Move(velocity * Time.deltaTime);
+        UpdateMovementAudio(hasMovementInput, wantsToRun);
+    }
+
+    private void LateUpdate()
+    {
+        ApplyFirstPersonCamera();
+    }
+
+    private void CacheFirstPersonCameraTarget()
+    {
+        if (firstPersonCameraTarget != null)
+        {
+            return;
+        }
+
+        Transform[] childTransforms = GetComponentsInChildren<Transform>(true);
+        firstPersonCameraTarget = childTransforms.FirstOrDefault(candidate => candidate.name == CameraTargetName);
+    }
+
+    private void InitializeFirstPersonCamera()
+    {
+        if (!useFirstPersonCamera || cameraTransform == null)
+        {
+            return;
+        }
+
+        Behaviour cinemachineBrain = cameraTransform.GetComponent("CinemachineBrain") as Behaviour;
+        if (cinemachineBrain != null)
+        {
+            cinemachineBrain.enabled = false;
+        }
+
+        ThirdPersonCameraFollow legacyFollow = cameraTransform.GetComponent<ThirdPersonCameraFollow>();
+        if (legacyFollow != null)
+        {
+            legacyFollow.enabled = false;
+        }
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+        cameraYaw = transform.eulerAngles.y;
+        cameraPitch = 0f;
+        ApplyFirstPersonCamera();
+    }
+
+    private void UpdateFirstPersonLook()
+    {
+        if (!useFirstPersonCamera)
+        {
+            return;
+        }
+
+        Mouse mouse = Mouse.current;
+        if (mouse != null && !PauseMenuManager.GameIsPaused)
+        {
+            Vector2 mouseDelta = mouse.delta.ReadValue();
+            cameraYaw += mouseDelta.x * mouseSensitivity;
+            cameraPitch = Mathf.Clamp(cameraPitch - mouseDelta.y * mouseSensitivity, minPitch, maxPitch);
+        }
+
+        transform.rotation = Quaternion.Euler(0f, cameraYaw, 0f);
+    }
+
+    private void ApplyFirstPersonCamera()
+    {
+        if (!useFirstPersonCamera || cameraTransform == null)
+        {
+            return;
+        }
+
+        CacheFirstPersonCameraTarget();
+        Transform cameraTarget = firstPersonCameraTarget != null ? firstPersonCameraTarget : transform;
+        cameraTransform.position = cameraTarget.position + transform.TransformVector(firstPersonCameraOffset);
+        cameraTransform.rotation = Quaternion.Euler(cameraPitch, cameraYaw, 0f);
     }
 
     private bool TryTeleportToCharacterHouse()
@@ -230,6 +357,11 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         {
             characterHouseDoor = FindCharacterHouseDoor();
         }
+
+        if (bedTarget == null || !bedTarget.gameObject.activeInHierarchy)
+        {
+            bedTarget = FindNearestBed();
+        }
     }
 
     private Transform FindCharacterHouseDoor()
@@ -254,6 +386,65 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         }
 
         return houseTransforms.FirstOrDefault(candidate => candidate.name == CharacterHouseFallbackDoorName);
+    }
+
+    private Transform FindNearestBed()
+    {
+        Transform[] sceneTransforms = FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Transform nearestBed = null;
+        float bestDistance = float.MaxValue;
+
+        foreach (Transform candidate in sceneTransforms)
+        {
+            if (!candidate.name.StartsWith("Bed", System.StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            float distance = (candidate.position - transform.position).sqrMagnitude;
+            if (distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            nearestBed = candidate;
+        }
+
+        return nearestBed;
+    }
+
+    private bool CanInteractWithBed()
+    {
+        if (bedTarget == null)
+        {
+            return false;
+        }
+
+        Vector3 nearestBedPoint = GetNearestInteractionPoint(bedTarget, transform.position);
+        return (nearestBedPoint - transform.position).sqrMagnitude <=
+               bedInteractionDistance * bedInteractionDistance;
+    }
+
+    private bool TrySleep()
+    {
+        if (!canSleep)
+        {
+            return false;
+        }
+
+        if (dayNightCycle == null)
+        {
+            dayNightCycle = FindFirstObjectByType<DayNightCycle>();
+        }
+
+        if (dayNightCycle == null)
+        {
+            return false;
+        }
+
+        dayNightCycle.SkipHours(sleepSkipHours);
+        return true;
     }
 
     private Vector3 GetCharacterHouseDestination()
@@ -384,7 +575,9 @@ public sealed class MinhThirdPersonController : MonoBehaviour
             ? houseDoorPrompt
             : canEnterCharacterHouse
                 ? roomDoorPrompt
-                : null;
+                : canSleep
+                    ? sleepPrompt
+                    : null;
 
         if (string.IsNullOrEmpty(promptText))
         {
@@ -458,5 +651,195 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         }
 
         animator.SetBool(IsWalkingHash, isWalking);
+    }
+
+    private void EnsureMovementAudio()
+    {
+        if (movementAudioSource == null)
+        {
+            movementAudioSource = GetComponent<AudioSource>();
+        }
+
+        if (movementAudioSource == null)
+        {
+            movementAudioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        movementAudioSource.playOnAwake = false;
+        movementAudioSource.loop = false;
+        movementAudioSource.spatialBlend = 0f;
+
+        LoadMovementAudioAssets();
+
+        walkFootstepClip ??= GetFirstClip(walkFootstepClips) ?? CreateFootstepClip("Minh Walk Footstep", 105f, 13);
+        runFootstepClip ??= GetFirstClip(runFootstepClips) ?? CreateFootstepClip("Minh Run Footstep", 130f, 23);
+        jumpClip ??= LoadMovementClip("cloth1") ?? CreateJumpClip();
+        landingClip ??= LoadMovementClip("dropLeather") ?? CreateLandingClip();
+    }
+
+    private void UpdateMovementAudio(bool hasMovementInput, bool wantsToRun)
+    {
+        EnsureMovementAudio();
+
+        bool isGrounded = characterController.isGrounded;
+        if (!wasGrounded && isGrounded && previousVerticalVelocity < -minLandingSoundVelocity)
+        {
+            PlayMovementSound(landingClip, landingVolume);
+        }
+
+        if (!isGrounded || !hasMovementInput)
+        {
+            if (!hasMovementInput)
+            {
+                nextFootstepTime = Time.time;
+            }
+
+            wasGrounded = isGrounded;
+            previousVerticalVelocity = verticalVelocity;
+            return;
+        }
+
+        if (Time.time >= nextFootstepTime)
+        {
+            AudioClip footstepClip = GetNextFootstepClip(wantsToRun);
+            PlayMovementSound(footstepClip, footstepVolume);
+            float interval = wantsToRun ? runStepInterval : walkStepInterval;
+            nextFootstepTime = Time.time + Mathf.Max(0.08f, interval);
+        }
+
+        wasGrounded = isGrounded;
+        previousVerticalVelocity = verticalVelocity;
+    }
+
+    private void LoadMovementAudioAssets()
+    {
+        if (walkFootstepClips == null || walkFootstepClips.Length == 0)
+        {
+            walkFootstepClips = new[]
+            {
+                LoadMovementClip("footstep00"),
+                LoadMovementClip("footstep01"),
+                LoadMovementClip("footstep02"),
+                LoadMovementClip("footstep03"),
+                LoadMovementClip("footstep04")
+            }.Where(clip => clip != null).ToArray();
+        }
+
+        if (runFootstepClips == null || runFootstepClips.Length == 0)
+        {
+            runFootstepClips = new[]
+            {
+                LoadMovementClip("footstep05"),
+                LoadMovementClip("footstep06"),
+                LoadMovementClip("footstep07"),
+                LoadMovementClip("footstep08"),
+                LoadMovementClip("footstep09")
+            }.Where(clip => clip != null).ToArray();
+        }
+    }
+
+    private AudioClip GetNextFootstepClip(bool wantsToRun)
+    {
+        AudioClip[] clips = wantsToRun ? runFootstepClips : walkFootstepClips;
+        if (clips == null || clips.Length == 0)
+        {
+            return wantsToRun ? runFootstepClip : walkFootstepClip;
+        }
+
+        int index = wantsToRun ? nextRunFootstepIndex : nextWalkFootstepIndex;
+        AudioClip clip = clips[index % clips.Length];
+
+        if (wantsToRun)
+        {
+            nextRunFootstepIndex = (nextRunFootstepIndex + 1) % clips.Length;
+        }
+        else
+        {
+            nextWalkFootstepIndex = (nextWalkFootstepIndex + 1) % clips.Length;
+        }
+
+        return clip;
+    }
+
+    private static AudioClip GetFirstClip(AudioClip[] clips)
+    {
+        return clips == null || clips.Length == 0 ? null : clips[0];
+    }
+
+    private static AudioClip LoadMovementClip(string clipName)
+    {
+        return Resources.Load<AudioClip>($"Audio/SFX/Movement/{clipName}");
+    }
+
+    private void PlayMovementSound(AudioClip clip, float volume)
+    {
+        if (movementAudioSource == null || clip == null || volume <= 0f)
+        {
+            return;
+        }
+
+        movementAudioSource.PlayOneShot(clip, volume);
+    }
+
+    private static AudioClip CreateFootstepClip(string clipName, float toneFrequency, int seed)
+    {
+        const int sampleRate = 44100;
+        int sampleCount = Mathf.CeilToInt(sampleRate * 0.13f);
+        float[] samples = new float[sampleCount];
+        System.Random random = new(seed);
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)sampleRate;
+            float envelope = Mathf.Exp(-t * 24f);
+            float lowTone = Mathf.Sin(2f * Mathf.PI * toneFrequency * t) * 0.45f;
+            float noise = ((float)random.NextDouble() * 2f - 1f) * 0.55f;
+            samples[i] = (lowTone + noise) * envelope;
+        }
+
+        return CreateClip(clipName, sampleRate, samples);
+    }
+
+    private static AudioClip CreateJumpClip()
+    {
+        const int sampleRate = 44100;
+        int sampleCount = Mathf.CeilToInt(sampleRate * 0.16f);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)sampleRate;
+            float envelope = Mathf.Sin(Mathf.Clamp01(t / 0.16f) * Mathf.PI) * 0.7f;
+            float frequency = Mathf.Lerp(180f, 420f, t / 0.16f);
+            samples[i] = Mathf.Sin(2f * Mathf.PI * frequency * t) * envelope;
+        }
+
+        return CreateClip("Minh Jump", sampleRate, samples);
+    }
+
+    private static AudioClip CreateLandingClip()
+    {
+        const int sampleRate = 44100;
+        int sampleCount = Mathf.CeilToInt(sampleRate * 0.18f);
+        float[] samples = new float[sampleCount];
+        System.Random random = new(31);
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)sampleRate;
+            float envelope = Mathf.Exp(-t * 18f);
+            float thud = Mathf.Sin(2f * Mathf.PI * 75f * t) * 0.6f;
+            float noise = ((float)random.NextDouble() * 2f - 1f) * 0.3f;
+            samples[i] = (thud + noise) * envelope;
+        }
+
+        return CreateClip("Minh Landing", sampleRate, samples);
+    }
+
+    private static AudioClip CreateClip(string clipName, int sampleRate, float[] samples)
+    {
+        AudioClip clip = AudioClip.Create(clipName, samples.Length, 1, sampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
     }
 }
