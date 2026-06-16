@@ -59165,6 +59165,9 @@ MonoBehaviour:
   fullDayDurationSeconds: 7200
   startTimeOfDay: 8
   runCycle: 1
+  startDay: 1
+  startMonth: 9
+  startWeekDay: 0
   sunAzimuth: 170
   daySunIntensity: 1.1
   nightSunIntensity: 0.025
@@ -73131,8 +73134,8 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 768495177}
-  - {fileID: 1102630728}
   - {fileID: 52533600}
+  - {fileID: 1102630728}
   - {fileID: 1722890189}
   - {fileID: 2046467008}
   - {fileID: 2068296452}
