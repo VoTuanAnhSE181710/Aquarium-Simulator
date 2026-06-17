@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,9 +10,16 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
     [SerializeField] private string promptText = "Press F to enter";
     [SerializeField] private string playerObjectName = "Minh";
     [SerializeField] private float activationRadius = 4.5f;
+    [SerializeField] private string workSceneName = "CoffeeShopInteriorNIGHT";
+    [SerializeField] private string workTransitionText = "4 tiếng sau ...";
+    [SerializeField, Min(0f)] private float workHours = 4f;
+    [SerializeField, Min(0)] private int hourlyPayVnd = 20000;
+    [SerializeField, Min(0.1f)] private float workTransitionSeconds = 2f;
 
     private GameObject nearbyPlayer;
     private GUIStyle promptStyle;
+    private GUIStyle transitionStyle;
+    private bool isTransitioning;
 
     private void Reset()
     {
@@ -30,12 +38,40 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
         UpdateNearbyPlayerByDistance();
 
         Keyboard keyboard = Keyboard.current;
-        if (nearbyPlayer == null || keyboard == null || !keyboard.fKey.wasPressedThisFrame)
+        if (isTransitioning || nearbyPlayer == null || keyboard == null || !keyboard.fKey.wasPressedThisFrame)
         {
             return;
         }
 
-        CoffeeShopSceneTransition.LoadScene(targetSceneName, targetSpawnPointId, nearbyPlayer);
+        StartCoroutine(LoadSceneAfterOptionalWorkShift(nearbyPlayer));
+    }
+
+    private IEnumerator LoadSceneAfterOptionalWorkShift(GameObject player)
+    {
+        isTransitioning = true;
+
+        if (ShouldRunWorkShift())
+        {
+            yield return new WaitForSecondsRealtime(workTransitionSeconds);
+
+            DayNightCycle dayNightCycle = FindFirstObjectByType<DayNightCycle>();
+            if (dayNightCycle != null)
+            {
+                dayNightCycle.SkipHours(workHours);
+            }
+
+            PlayerMoneyDisplay.AddMoney(Mathf.RoundToInt(workHours * hourlyPayVnd));
+        }
+
+        CoffeeShopSceneTransition.LoadScene(targetSceneName, targetSpawnPointId, player);
+    }
+
+    private bool ShouldRunWorkShift()
+    {
+        return !string.IsNullOrWhiteSpace(workSceneName) &&
+               string.Equals(targetSceneName, workSceneName, System.StringComparison.OrdinalIgnoreCase) &&
+               workHours > 0f &&
+               hourlyPayVnd > 0;
     }
 
     private void UpdateNearbyPlayerByDistance()
@@ -88,6 +124,12 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
 
     private void OnGUI()
     {
+        if (isTransitioning && ShouldRunWorkShift())
+        {
+            DrawWorkTransition();
+            return;
+        }
+
         if (nearbyPlayer == null || string.IsNullOrWhiteSpace(promptText))
         {
             return;
@@ -110,5 +152,26 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
             width,
             height);
         GUI.Box(promptRect, promptText, promptStyle);
+    }
+
+    private void DrawWorkTransition()
+    {
+        transitionStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 34,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white }
+        };
+
+        Color previousColor = GUI.color;
+        int previousDepth = GUI.depth;
+        GUI.depth = -10000;
+        GUI.color = Color.black;
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = previousColor;
+
+        GUI.Label(new Rect(0f, 0f, Screen.width, Screen.height), workTransitionText, transitionStyle);
+        GUI.depth = previousDepth;
     }
 }
