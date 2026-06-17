@@ -167,7 +167,7 @@ public sealed class BusSchoolAttendanceController : MonoBehaviour
                 continue;
             }
 
-            Vector3 closestPoint = busCollider.ClosestPoint(player.position);
+            Vector3 closestPoint = GetClosestSupportedPoint(busCollider, player.position);
             if ((player.position - closestPoint).sqrMagnitude <= interactionDistance * interactionDistance)
             {
                 return true;
@@ -175,6 +175,20 @@ public sealed class BusSchoolAttendanceController : MonoBehaviour
         }
 
         return (player.position - busTarget.position).sqrMagnitude <= interactionDistance * interactionDistance;
+    }
+
+    private static Vector3 GetClosestSupportedPoint(Collider collider, Vector3 position)
+    {
+        MeshCollider meshCollider = collider as MeshCollider;
+        if (collider is BoxCollider ||
+            collider is SphereCollider ||
+            collider is CapsuleCollider ||
+            (meshCollider != null && meshCollider.convex))
+        {
+            return collider.ClosestPoint(position);
+        }
+
+        return collider.bounds.ClosestPoint(position);
     }
 
     private void FindPlayer()
