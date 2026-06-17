@@ -83,6 +83,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
     public void SetCameraTransform(Transform newCameraTransform)
     {
         cameraTransform = newCameraTransform;
+        InitializeFirstPersonCamera();
     }
 
     private void Start()
@@ -93,11 +94,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         wasGrounded = characterController.isGrounded;
         EnsureMovementAudio();
 
-        if (cameraTransform == null && Camera.main != null)
-        {
-            cameraTransform = Camera.main.transform;
-        }
-
+        EnsureCameraTransform();
         CacheFirstPersonCameraTarget();
         InitializeFirstPersonCamera();
         if (dayNightCycle == null)
@@ -111,6 +108,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
     private void Update()
     {
         Keyboard keyboard = Keyboard.current;
+        EnsureCameraTransform();
         if (keyboard == null || cameraTransform == null)
         {
             return;
@@ -191,7 +189,17 @@ public sealed class MinhThirdPersonController : MonoBehaviour
 
     private void LateUpdate()
     {
+        EnsureCameraTransform();
         ApplyFirstPersonCamera();
+    }
+
+    private void EnsureCameraTransform()
+    {
+        if (cameraTransform == null && Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+            InitializeFirstPersonCamera();
+        }
     }
 
     private void CacheFirstPersonCameraTarget()
