@@ -92,6 +92,10 @@ public sealed class CharacterAnimatorDriver : MonoBehaviour
         wasGrounded = isGrounded;
     }
 
+    public void PlayFootstepSound()
+    {
+    }
+
     private bool HasParameter(int parameterHash)
     {
         foreach (AnimatorControllerParameter parameter in animator.parameters)
