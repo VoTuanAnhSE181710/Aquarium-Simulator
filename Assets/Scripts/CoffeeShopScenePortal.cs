@@ -8,6 +8,10 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
     [SerializeField] private string targetSceneName = "CoffeeShopInteriorNIGHT";
     [SerializeField] private string targetSpawnPointId = "CoffeeInteriorEntry";
     [SerializeField] private string promptText = "Press F to enter";
+    [SerializeField] private string choiceTitle = "Coffee Shop";
+    [SerializeField] private string enterShopText = "1. Vào shop";
+    [SerializeField] private string workShiftText = "2. Làm việc";
+    [SerializeField] private string closeChoiceText = "Esc để đóng";
     [SerializeField] private string playerObjectName = "Minh";
     [SerializeField] private float activationRadius = 4.5f;
     [SerializeField] private string workSceneName = "CoffeeShopInteriorNIGHT";
@@ -18,8 +22,12 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
 
     private GameObject nearbyPlayer;
     private GUIStyle promptStyle;
+    private GUIStyle choiceStyle;
+    private GUIStyle choiceButtonStyle;
+    private GUIStyle choiceHintStyle;
     private GUIStyle transitionStyle;
     private bool isTransitioning;
+    private bool isChoiceMenuOpen;
 
     private void Reset()
     {
@@ -38,35 +46,79 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
         UpdateNearbyPlayerByDistance();
 
         Keyboard keyboard = Keyboard.current;
-        if (isTransitioning || nearbyPlayer == null || keyboard == null || !keyboard.fKey.wasPressedThisFrame)
+        if (isTransitioning || keyboard == null)
         {
             return;
         }
 
-        StartCoroutine(LoadSceneAfterOptionalWorkShift(nearbyPlayer));
-    }
-
-    private IEnumerator LoadSceneAfterOptionalWorkShift(GameObject player)
-    {
-        isTransitioning = true;
-
-        if (ShouldRunWorkShift())
+        if (nearbyPlayer == null)
         {
-            yield return new WaitForSecondsRealtime(workTransitionSeconds);
-
-            DayNightCycle dayNightCycle = FindFirstObjectByType<DayNightCycle>();
-            if (dayNightCycle != null)
-            {
-                dayNightCycle.SkipHours(workHours);
-            }
-
-            PlayerMoneyDisplay.AddMoney(Mathf.RoundToInt(workHours * hourlyPayVnd));
+            isChoiceMenuOpen = false;
+            return;
         }
 
-        CoffeeShopSceneTransition.LoadScene(targetSceneName, targetSpawnPointId, player);
+        if (!ShouldOfferWorkShift())
+        {
+            if (keyboard.fKey.wasPressedThisFrame)
+            {
+                EnterShop();
+            }
+
+            return;
+        }
+
+        if (!isChoiceMenuOpen)
+        {
+            if (keyboard.fKey.wasPressedThisFrame)
+            {
+                isChoiceMenuOpen = true;
+            }
+
+            return;
+        }
+
+        if (keyboard.digit1Key.wasPressedThisFrame || keyboard.numpad1Key.wasPressedThisFrame)
+        {
+            EnterShop();
+        }
+        else if (keyboard.digit2Key.wasPressedThisFrame || keyboard.numpad2Key.wasPressedThisFrame)
+        {
+            StartWorkShift();
+        }
+        else if (keyboard.escapeKey.wasPressedThisFrame)
+        {
+            isChoiceMenuOpen = false;
+        }
     }
 
-    private bool ShouldRunWorkShift()
+    private void EnterShop()
+    {
+        isChoiceMenuOpen = false;
+        CoffeeShopSceneTransition.LoadScene(targetSceneName, targetSpawnPointId, nearbyPlayer);
+    }
+
+    private void StartWorkShift()
+    {
+        isChoiceMenuOpen = false;
+        StartCoroutine(RunWorkShift());
+    }
+
+    private IEnumerator RunWorkShift()
+    {
+        isTransitioning = true;
+        yield return new WaitForSecondsRealtime(workTransitionSeconds);
+
+        DayNightCycle dayNightCycle = FindFirstObjectByType<DayNightCycle>();
+        if (dayNightCycle != null)
+        {
+            dayNightCycle.SkipHours(workHours);
+        }
+
+        PlayerMoneyDisplay.AddMoney(Mathf.RoundToInt(workHours * hourlyPayVnd));
+        isTransitioning = false;
+    }
+
+    private bool ShouldOfferWorkShift()
     {
         return !string.IsNullOrWhiteSpace(workSceneName) &&
                string.Equals(targetSceneName, workSceneName, System.StringComparison.OrdinalIgnoreCase) &&
@@ -109,6 +161,7 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
         if (candidate == nearbyPlayer)
         {
             nearbyPlayer = null;
+            isChoiceMenuOpen = false;
         }
     }
 
@@ -124,7 +177,7 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
 
     private void OnGUI()
     {
-        if (isTransitioning && ShouldRunWorkShift())
+        if (isTransitioning && ShouldOfferWorkShift())
         {
             DrawWorkTransition();
             return;
@@ -132,6 +185,12 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
 
         if (nearbyPlayer == null || string.IsNullOrWhiteSpace(promptText))
         {
+            return;
+        }
+
+        if (isChoiceMenuOpen && ShouldOfferWorkShift())
+        {
+            DrawChoiceMenu();
             return;
         }
 
@@ -152,6 +211,69 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
             width,
             height);
         GUI.Box(promptRect, promptText, promptStyle);
+    }
+
+    private void DrawChoiceMenu()
+    {
+        EnsureChoiceStyles();
+
+        const float width = 320f;
+        const float height = 188f;
+        Rect menuRect = new(
+            (Screen.width - width) * 0.5f,
+            (Screen.height - height) * 0.5f,
+            width,
+            height);
+
+        GUI.Box(menuRect, choiceTitle, choiceStyle);
+
+        Rect enterRect = new(menuRect.x + 24f, menuRect.y + 56f, width - 48f, 38f);
+        Rect workRect = new(menuRect.x + 24f, menuRect.y + 102f, width - 48f, 38f);
+        Rect hintRect = new(menuRect.x + 24f, menuRect.y + 146f, width - 48f, 24f);
+
+        if (GUI.Button(enterRect, enterShopText, choiceButtonStyle))
+        {
+            EnterShop();
+        }
+
+        if (GUI.Button(workRect, workShiftText, choiceButtonStyle))
+        {
+            StartWorkShift();
+        }
+
+        GUI.Label(hintRect, closeChoiceText, choiceHintStyle);
+    }
+
+    private void EnsureChoiceStyles()
+    {
+        if (choiceStyle != null)
+        {
+            return;
+        }
+
+        choiceStyle = new GUIStyle(GUI.skin.box)
+        {
+            alignment = TextAnchor.UpperCenter,
+            fontSize = 20,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white },
+            padding = new RectOffset(18, 18, 16, 16)
+        };
+
+        choiceButtonStyle = new GUIStyle(GUI.skin.button)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 18,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white }
+        };
+
+        choiceHintStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 14,
+            normal = { textColor = Color.white }
+        };
     }
 
     private void DrawWorkTransition()
