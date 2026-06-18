@@ -43,6 +43,10 @@ public sealed class MinhThirdPersonController : MonoBehaviour
     [SerializeField] private string houseDoorPrompt = "Press F to get out";
     [SerializeField] private string sleepPrompt = "Press F to sleep";
 
+    [Header("Interaction Audio")]
+    [SerializeField] private AudioClip doorOpenClip;
+    [SerializeField, Range(0f, 1f)] private float doorVolume = 0.8f;
+
     [Header("Movement Audio")]
     [SerializeField] private AudioSource movementAudioSource;
     [SerializeField] private AudioClip[] walkFootstepClips;
@@ -275,6 +279,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         transform.rotation = GetCharacterHouseFacing(destination);
         characterController.enabled = true;
         verticalVelocity = 0f;
+        PlayInteractionSound(doorOpenClip, doorVolume);
         return true;
     }
 
@@ -291,6 +296,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         transform.rotation = GetRoomDoorFacing(destination);
         characterController.enabled = true;
         verticalVelocity = 0f;
+        PlayInteractionSound(doorOpenClip, doorVolume);
         return true;
     }
 
@@ -386,6 +392,18 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         }
 
         return houseTransforms.FirstOrDefault(candidate => candidate.name == CharacterHouseFallbackDoorName);
+    }
+
+    private void PlayInteractionSound(AudioClip clip, float volume)
+    {
+        if (movementAudioSource == null || clip == null || volume <= 0f)
+        {
+            return;
+        }
+
+        // Đổi cao độ ngẫu nhiên một chút để tiếng mở cửa nghe tự nhiên hơn
+        movementAudioSource.pitch = Random.Range(0.95f, 1.05f);
+        movementAudioSource.PlayOneShot(clip, volume);
     }
 
     private Transform FindNearestBed()

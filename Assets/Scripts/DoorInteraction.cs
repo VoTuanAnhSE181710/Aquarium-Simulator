@@ -11,6 +11,13 @@ public sealed class DoorInteraction : MonoBehaviour
     [SerializeField] private float rotationSpeed = 180f;
     [SerializeField] private bool startOpen;
 
+    // --- PHẦN THÊM MỚI CHO ÂM THANH ---
+    [Header("Cài đặt Âm thanh (Audio)")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip openSound;  // File âm thanh khi mở
+    [SerializeField] private AudioClip closeSound; // File âm thanh khi đóng
+    // ----------------------------------
+
     private Transform rotationPivot;
     private Quaternion closedRotation;
     private Quaternion openRotation;
@@ -31,6 +38,7 @@ public sealed class DoorInteraction : MonoBehaviour
 
     private void Update()
     {
+        // Chặn tương tác nếu đang mở Pause Menu
         if (PauseMenuManager.GameIsPaused)
         {
             return;
@@ -48,13 +56,34 @@ public sealed class DoorInteraction : MonoBehaviour
             FindPlayer();
         }
 
+        // KHI NGƯỜI CHƠI NHẤN PHÍM 'F' HỢP LỆ
         if (player != null && IsWithinInteractionDistance(player.position) && IsClosestDoorToPlayer())
         {
-            isOpen = !isOpen;
+            isOpen = !isOpen; // Đảo ngược trạng thái cửa
+
+            // --- GỌI HÀM PHÁT ÂM THANH TẠI ĐÂY ---
+            PlayDoorSound(isOpen);
         }
 
         AnimateDoor();
     }
+
+    // --- HÀM XỬ LÝ PHÁT ÂM THANH ---
+    private void PlayDoorSound(bool isOpening)
+    {
+        if (audioSource == null) return;
+
+        // Chọn file âm thanh tương ứng với trạng thái
+        AudioClip clipToPlay = isOpening ? openSound : closeSound;
+
+        if (clipToPlay != null)
+        {
+            // Thay đổi cao độ (pitch) ngẫu nhiên một chút xíu để nghe không bị nhàm chán nếu mở/đóng liên tục
+            audioSource.pitch = Random.Range(0.9f, 1.1f);
+            audioSource.PlayOneShot(clipToPlay);
+        }
+    }
+    // ---------------------------------
 
     private void AnimateDoor()
     {
