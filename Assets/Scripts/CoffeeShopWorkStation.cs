@@ -1,28 +1,33 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Collider))]
-public sealed class CoffeeShopScenePortal : MonoBehaviour
+public sealed class CoffeeShopWorkStation : MonoBehaviour
 {
-    [SerializeField] private string targetSceneName = "CoffeeShopInteriorNIGHT";
-    [SerializeField] private string targetSpawnPointId = "CoffeeInteriorEntry";
-    [SerializeField] private string promptText = "Press F to enter";
+    [SerializeField] private string promptText = "B\u1ea5m F \u0111\u1ec3 l\u00e0m vi\u1ec7c";
+    [SerializeField] private string transitionText = "6 ti\u1ebfng sau ...";
     [SerializeField] private string playerObjectName = "Minh";
-    [SerializeField] private float activationRadius = 4.5f;
+    [SerializeField] private float activationRadius = 2f;
+    [SerializeField, Min(0f)] private float workHours = 6f;
+    [SerializeField, Min(0)] private int hourlyPayVnd = 20000;
+    [SerializeField, Min(0.1f)] private float transitionSeconds = 2f;
 
     private GameObject nearbyPlayer;
     private GUIStyle promptStyle;
+    private GUIStyle transitionStyle;
+    private bool isWorking;
 
     private void Reset()
     {
-        Collider portalCollider = GetComponent<Collider>();
-        portalCollider.isTrigger = true;
+        Collider stationCollider = GetComponent<Collider>();
+        stationCollider.isTrigger = true;
     }
 
     private void Awake()
     {
-        Collider portalCollider = GetComponent<Collider>();
-        portalCollider.isTrigger = true;
+        Collider stationCollider = GetComponent<Collider>();
+        stationCollider.isTrigger = true;
     }
 
     private void Update()
@@ -30,10 +35,22 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
         UpdateNearbyPlayerByDistance();
 
         Keyboard keyboard = Keyboard.current;
-        if (nearbyPlayer != null && keyboard != null && keyboard.fKey.wasPressedThisFrame)
+        if (isWorking || nearbyPlayer == null || keyboard == null || !keyboard.fKey.wasPressedThisFrame)
         {
-            CoffeeShopSceneTransition.LoadScene(targetSceneName, targetSpawnPointId, nearbyPlayer);
+            return;
         }
+
+        StartCoroutine(RunWorkShift());
+    }
+
+    private IEnumerator RunWorkShift()
+    {
+        isWorking = true;
+        yield return new WaitForSecondsRealtime(transitionSeconds);
+
+        CoffeeShopSceneTransition.QueueTimeSkip(workHours);
+        PlayerMoneyDisplay.AddMoney(Mathf.RoundToInt(workHours * hourlyPayVnd));
+        isWorking = false;
     }
 
     private void UpdateNearbyPlayerByDistance()
@@ -92,6 +109,12 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
 
     private void OnGUI()
     {
+        if (isWorking)
+        {
+            DrawWorkTransition();
+            return;
+        }
+
         if (nearbyPlayer == null || string.IsNullOrWhiteSpace(promptText))
         {
             return;
@@ -106,7 +129,7 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
             padding = new RectOffset(16, 16, 10, 10)
         };
 
-        const float width = 260f;
+        const float width = 280f;
         const float height = 42f;
         Rect promptRect = new(
             (Screen.width - width) * 0.5f,
@@ -114,5 +137,26 @@ public sealed class CoffeeShopScenePortal : MonoBehaviour
             width,
             height);
         GUI.Box(promptRect, promptText, promptStyle);
+    }
+
+    private void DrawWorkTransition()
+    {
+        transitionStyle ??= new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 34,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white }
+        };
+
+        Color previousColor = GUI.color;
+        int previousDepth = GUI.depth;
+        GUI.depth = -10000;
+        GUI.color = Color.black;
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = previousColor;
+
+        GUI.Label(new Rect(0f, 0f, Screen.width, Screen.height), transitionText, transitionStyle);
+        GUI.depth = previousDepth;
     }
 }

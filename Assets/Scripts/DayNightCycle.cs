@@ -73,6 +73,15 @@ public sealed class DayNightCycle : MonoBehaviour
         ApplyLighting();
     }
 
+    public void SetDateTime(int day, int month, WeekDay weekDay, float timeOfDay)
+    {
+        currentDay = Mathf.Max(1, day);
+        currentMonth = Mathf.Clamp(month, 1, 12);
+        currentWeekDay = weekDay;
+        currentTimeOfDay = Mathf.Repeat(timeOfDay, 24f);
+        ApplyLighting();
+    }
+
     public void SetTimeOfDay(float timeOfDay)
     {
         float normalizedTime = Mathf.Repeat(timeOfDay, 24f);
