@@ -10,29 +10,20 @@ public static class PhysicsSceneSetup
 {
     private static readonly string[] CharacterNames =
     {
-        "Linh",
-        "Minh",
-        "MissLan",
-        "Tuan",
-        "UncleHung"
+        "Linh", "Minh", "MissLan", "Tuan", "UncleHung",
+        "Ch01_nonPBR", "Ch02_nonPBR", "Ch06_nonPBR", "Ch07_nonPBR",
+        "Ch08_nonPBR", "Ch21_nonPBR", "Ch22_nonPBR", "Ch23_nonPBR",
+        "Ch26_nonPBR", "Ch27_nonPBR", "Ch28_nonPBR", "Ch31_nonPBR",
+        "Ch33_nonPBR", "Ch37_nonPBR", "Ch41_nonPBR", "Ch42_nonPBR", "Remy"
     };
 
     private static readonly string[] NonBlockingKeywords =
     {
-        "grasse",
-        "flower",
-        "leaf",
-        "foliage",
-        "water",
-        "sky",
-        "roof",
-        "celling",
-        "ceiling",
-        "windowcolor",
-        "window_color"
+        "grasse", "flower", "leaf", "foliage", "water", "sky",
+        "roof", "celling", "ceiling", "windowcolor", "window_color"
     };
 
-    private const string AnimatorControllerPath = "Assets/Animations/AquariumCharacter.controller";
+    private const string AnimatorControllerPath = "Assets/Animations/CharController.controller";
     private const string IdleClipPath = "Assets/Animations/Reference/Idle.anim";
     private const string WalkingClipPath = "Assets/Animations/Reference/Walking.anim";
 
@@ -70,7 +61,7 @@ public static class PhysicsSceneSetup
     private static int SetupCharacters()
     {
         int count = 0;
-        AnimatorController animatorController = SetupAnimatorController();
+        AnimatorController animatorController = LoadAnimatorController();
         foreach (string characterName in CharacterNames)
         {
             GameObject character = GameObject.Find(characterName);
@@ -85,19 +76,37 @@ public static class PhysicsSceneSetup
                 controller = Undo.AddComponent<CharacterController>(character);
                 count++;
             }
+            else
+            {
+                // BẮT BUỘC: Báo cho Unity biết ta sắp sửa một Component đã tồn tại
+                Undo.RecordObject(controller, "Setup Character Controller Properties");
+            }
 
             float inverseScale = 1f / Mathf.Max(character.transform.lossyScale.y, 0.0001f);
-            controller.height = 1.8f * inverseScale;
+            
+            // Tính toán height trước
+            float calculatedHeight = 1.8f * inverseScale;
+            
+            controller.height = calculatedHeight;
             controller.radius = 0.35f * inverseScale;
             controller.center = new Vector3(0f, 0.9f * inverseScale, 0f);
-            controller.stepOffset = 0.3f * inverseScale;
             controller.skinWidth = 0.08f * inverseScale;
+
+            // Kiểm tra quy tắc ngầm của Unity
+            if (0.315f > calculatedHeight)
+            {
+                Debug.LogWarning($"[PhysicsSetup] Nhân vật {characterName} có Height ({calculatedHeight:F3}) nhỏ hơn StepOffset (0.315). Unity sẽ tự động clamp StepOffset xuống bằng Height!");
+            }
+
+            // Gán Step Offset
+            controller.stepOffset = 0.315f;
             controller.slopeLimit = 50f;
 
-            if (EnsureComponent<CharacterGroundProbe>(character) != null)
-            {
-                count++;
-            }
+            // BẮT BUỘC: Ép Unity lưu dữ liệu vừa sửa (Hỗ trợ cả Prefab)
+            EditorUtility.SetDirty(controller);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(controller);
+
+            if (EnsureComponent<CharacterGroundProbe>(character) != null) count++;
 
             Animator animator = character.GetComponent<Animator>();
             if (animator == null)
@@ -108,20 +117,16 @@ public static class PhysicsSceneSetup
 
             if (animatorController != null)
             {
+                Undo.RecordObject(animator, "Setup Animator");
                 animator.runtimeAnimatorController = animatorController;
                 animator.applyRootMotion = false;
                 animator.updateMode = AnimatorUpdateMode.Normal;
+                EditorUtility.SetDirty(animator);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(animator);
             }
 
-            if (EnsureComponent<CharacterAnimatorDriver>(character) != null)
-            {
-                count++;
-            }
-
-            if (EnsureComponent<HumanoidFootGroundingIK>(character) != null)
-            {
-                count++;
-            }
+            if (EnsureComponent<CharacterAnimatorDriver>(character) != null) count++;
+            if (EnsureComponent<HumanoidFootGroundingIK>(character) != null) count++;
 
             if (!string.Equals(characterName, "Minh", StringComparison.OrdinalIgnoreCase) &&
                 character.GetComponent<NpcWander>() == null)
@@ -136,7 +141,8 @@ public static class PhysicsSceneSetup
 
     private static T EnsureComponent<T>(GameObject gameObject) where T : Component
     {
-        if (gameObject.GetComponent<T>() != null)
+        T existingComponent = gameObject.GetComponent<T>();
+        if (existingComponent != null)
         {
             return null;
         }
@@ -144,60 +150,16 @@ public static class PhysicsSceneSetup
         return Undo.AddComponent<T>(gameObject);
     }
 
-    private static AnimatorController SetupAnimatorController()
+    private static AnimatorController LoadAnimatorController()
     {
-        AnimationClip idle = AssetDatabase.LoadAssetAtPath<AnimationClip>(IdleClipPath);
-        AnimationClip walking = AssetDatabase.LoadAssetAtPath<AnimationClip>(WalkingClipPath);
-        if (idle == null || walking == null)
+        AnimatorController controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+        if (controller == null)
         {
-            Debug.LogWarning("Idle or Walking animation clip is missing. Animator Controller setup was skipped.");
+            Debug.LogWarning($"Animator Controller not found at '{AnimatorControllerPath}'. Character animations will not work.");
             return null;
         }
 
-        StripTranslationAndScaleCurves(idle);
-        StripTranslationAndScaleCurves(walking);
-
-        AnimatorController existingController = AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
-        if (existingController != null)
-        {
-            EnsureAnimatorParameter(existingController, "Speed", AnimatorControllerParameterType.Float);
-            EnsureAnimatorParameter(existingController, "Grounded", AnimatorControllerParameterType.Bool);
-            EnsureAnimatorParameter(existingController, "Airborne", AnimatorControllerParameterType.Bool);
-            EnsureAnimatorParameter(existingController, "VerticalSpeed", AnimatorControllerParameterType.Float);
-            EnsureAnimatorParameter(existingController, "HardLanding", AnimatorControllerParameterType.Trigger);
-            EnsureIkPass(existingController);
-            EditorUtility.SetDirty(existingController);
-            AssetDatabase.SaveAssets();
-            return existingController;
-        }
-
-        AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(AnimatorControllerPath);
-        controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
-        controller.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
-        controller.AddParameter("Airborne", AnimatorControllerParameterType.Bool);
-        controller.AddParameter("VerticalSpeed", AnimatorControllerParameterType.Float);
-        controller.AddParameter("HardLanding", AnimatorControllerParameterType.Trigger);
-
-        AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
-        AnimatorState locomotion = stateMachine.AddState("Locomotion");
-        locomotion.iKOnFeet = true;
-        stateMachine.defaultState = locomotion;
-
-        BlendTree blendTree = new()
-        {
-            name = "Idle Walk Blend",
-            blendType = BlendTreeType.Simple1D,
-            blendParameter = "Speed",
-            useAutomaticThresholds = false
-        };
-
-        AssetDatabase.AddObjectToAsset(blendTree, controller);
-        blendTree.AddChild(idle, 0f);
-        blendTree.AddChild(walking, 1f);
-        locomotion.motion = blendTree;
         EnsureIkPass(controller);
-        EditorUtility.SetDirty(controller);
-        AssetDatabase.SaveAssets();
         return controller;
     }
 
@@ -217,10 +179,7 @@ public static class PhysicsSceneSetup
     private static void EnsureIkPass(AnimatorController controller)
     {
         AnimatorControllerLayer[] layers = controller.layers;
-        if (layers.Length == 0)
-        {
-            return;
-        }
+        if (layers.Length == 0) return;
 
         layers[0].iKPass = true;
         controller.layers = layers;
@@ -230,22 +189,6 @@ public static class PhysicsSceneSetup
         {
             childState.state.iKOnFeet = true;
         }
-    }
-
-    private static void StripTranslationAndScaleCurves(AnimationClip clip)
-    {
-        EditorCurveBinding[] bindings = AnimationUtility.GetCurveBindings(clip);
-
-        foreach (EditorCurveBinding binding in bindings)
-        {
-            if (binding.propertyName.StartsWith("m_LocalPosition", StringComparison.Ordinal) ||
-                binding.propertyName.StartsWith("m_LocalScale", StringComparison.Ordinal))
-            {
-                AnimationUtility.SetEditorCurve(clip, binding, null);
-            }
-        }
-
-        EditorUtility.SetDirty(clip);
     }
 
     private static int SetupEnvironmentColliders()
@@ -300,20 +243,14 @@ public static class PhysicsSceneSetup
     private static int RemoveUnnecessaryHouseColliders()
     {
         GameObject houseLine = GameObject.Find("HouseLine");
-        if (houseLine == null)
-        {
-            return 0;
-        }
+        if (houseLine == null) return 0;
 
         int count = 0;
         MeshCollider[] colliders = houseLine.GetComponentsInChildren<MeshCollider>(true);
 
         foreach (MeshCollider collider in colliders)
         {
-            if (ShouldBlockCharacter(collider.gameObject))
-            {
-                continue;
-            }
+            if (ShouldBlockCharacter(collider.gameObject)) continue;
 
             Undo.DestroyObjectImmediate(collider);
             count++;

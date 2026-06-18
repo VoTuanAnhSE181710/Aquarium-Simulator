@@ -31,7 +31,24 @@ public static class SceneEnvironmentPolishSetup
         "Minh",
         "MissLan",
         "Tuan",
-        "UncleHung"
+        "UncleHung",
+        "Ch01_nonPBR",
+        "Ch02_nonPBR",
+        "Ch06_nonPBR",
+        "Ch07_nonPBR",
+        "Ch08_nonPBR",
+        "Ch21_nonPBR",
+        "Ch22_nonPBR",
+        "Ch23_nonPBR",
+        "Ch26_nonPBR",
+        "Ch27_nonPBR",
+        "Ch28_nonPBR",
+        "Ch31_nonPBR",
+        "Ch33_nonPBR",
+        "Ch37_nonPBR",
+        "Ch41_nonPBR",
+        "Ch42_nonPBR",
+        "Remy"
     };
 
     private static readonly string[] DecorativeColliderKeywords =
