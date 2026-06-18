@@ -7,6 +7,11 @@ public class MouseLock : MonoBehaviour
     public Transform playerBody;
     public float rotationSpeed = 0.2f;
 
+    public void SetPlayerBody(Transform newPlayerBody)
+    {
+        playerBody = newPlayerBody;
+    }
+
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -19,10 +24,27 @@ public class MouseLock : MonoBehaviour
         if (PauseMenuManager.GameIsPaused)
             return;
 
+        if (playerBody == null)
+        {
+            FindPlayerBody();
+        }
+
         if (Cursor.lockState == CursorLockMode.Locked && Mouse.current != null)
         {
             float mouseX = Mouse.current.delta.x.ReadValue() * rotationSpeed;
-            playerBody.Rotate(Vector3.up * mouseX);
+            if (playerBody != null)
+            {
+                playerBody.Rotate(Vector3.up * mouseX);
+            }
+        }
+    }
+
+    private void FindPlayerBody()
+    {
+        MinhThirdPersonController controller = FindFirstObjectByType<MinhThirdPersonController>();
+        if (controller != null)
+        {
+            playerBody = controller.transform;
         }
     }
 }
