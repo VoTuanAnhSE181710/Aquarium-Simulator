@@ -9,6 +9,8 @@ public static class CoffeeShopSceneTransition
     private static string pendingSpawnPointId;
     private static GameObject persistentPlayer;
     private static GameObject persistentCamera;
+    private static GameTimeSnapshot savedGameTime;
+    private static float pendingSkipHours;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize()
@@ -24,20 +26,51 @@ public static class CoffeeShopSceneTransition
             return;
         }
 
+        CaptureGameTime();
         pendingSpawnPointId = spawnPointId;
         EnsurePersistentPlayer(player);
         EnsurePersistentCamera();
         SceneManager.LoadScene(sceneName);
     }
 
+    public static void QueueTimeSkip(float hours)
+    {
+        if (hours > 0f)
+        {
+            pendingSkipHours += hours;
+        }
+    }
+
+    public static GameObject GetActivePlayer()
+    {
+        ResolvePersistentPlayer();
+        return persistentPlayer;
+    }
+
     private static void EnsurePersistentPlayer(GameObject player)
     {
-        persistentPlayer = player.transform.root.gameObject;
+        if (persistentPlayer != null &&
+            persistentPlayer.GetComponentInChildren<MinhThirdPersonController>(true) != null)
+        {
+            UnityEngine.Object.DontDestroyOnLoad(persistentPlayer);
+            return;
+        }
+
+        MinhThirdPersonController incomingController = player.GetComponentInParent<MinhThirdPersonController>();
+        persistentPlayer = incomingController != null
+            ? incomingController.transform.root.gameObject
+            : player.transform.root.gameObject;
         UnityEngine.Object.DontDestroyOnLoad(persistentPlayer);
     }
 
     private static void EnsurePersistentCamera()
     {
+        if (persistentCamera != null)
+        {
+            UnityEngine.Object.DontDestroyOnLoad(persistentCamera);
+            return;
+        }
+
         Camera mainCamera = Camera.main;
         if (mainCamera == null)
         {
@@ -56,24 +89,66 @@ public static class CoffeeShopSceneTransition
 
     private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (persistentPlayer == null)
-        {
-            persistentPlayer = GameObject.Find(PlayerObjectName);
-        }
-
+        ResolvePersistentPlayer();
         RemoveRuntimeDuplicates();
         RewireCamera();
         MovePlayerToPendingSpawn();
+        RestoreGameTime();
+    }
+
+    private static void CaptureGameTime()
+    {
+        DayNightCycle dayNightCycle = UnityEngine.Object.FindFirstObjectByType<DayNightCycle>();
+        if (dayNightCycle == null)
+        {
+            return;
+        }
+
+        savedGameTime = new GameTimeSnapshot(
+            dayNightCycle.CurrentDay,
+            dayNightCycle.CurrentMonth,
+            dayNightCycle.CurrentWeekDay,
+            dayNightCycle.CurrentTimeOfDay,
+            true);
+    }
+
+    private static void RestoreGameTime()
+    {
+        DayNightCycle dayNightCycle = UnityEngine.Object.FindFirstObjectByType<DayNightCycle>();
+        if (dayNightCycle == null || !savedGameTime.HasValue)
+        {
+            return;
+        }
+
+        dayNightCycle.SetDateTime(
+            savedGameTime.Day,
+            savedGameTime.Month,
+            savedGameTime.WeekDay,
+            savedGameTime.TimeOfDay);
+
+        if (pendingSkipHours > 0f)
+        {
+            dayNightCycle.SkipHours(pendingSkipHours);
+            CaptureGameTime();
+            pendingSkipHours = 0f;
+        }
     }
 
     private static void RemoveRuntimeDuplicates()
     {
         if (persistentPlayer != null)
         {
-            foreach (GameObject duplicate in GameObject.FindGameObjectsWithTag("Untagged")
-                         .Where(candidate => candidate.name == PlayerObjectName && candidate != persistentPlayer))
+            MinhThirdPersonController[] playerControllers = UnityEngine.Object.FindObjectsByType<MinhThirdPersonController>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+
+            foreach (MinhThirdPersonController controller in playerControllers)
             {
-                UnityEngine.Object.Destroy(duplicate);
+                GameObject candidateRoot = controller.transform.root.gameObject;
+                if (candidateRoot != persistentPlayer)
+                {
+                    UnityEngine.Object.Destroy(candidateRoot);
+                }
             }
         }
 
@@ -103,16 +178,50 @@ public static class CoffeeShopSceneTransition
             return;
         }
 
+        MinhThirdPersonController controller = persistentPlayer.GetComponentInChildren<MinhThirdPersonController>(true);
+        Transform playerTarget = controller != null ? controller.transform : persistentPlayer.transform;
+
         ThirdPersonCameraFollow follow = persistentCamera.GetComponentInChildren<ThirdPersonCameraFollow>(true);
         if (follow != null)
         {
-            follow.SetTarget(persistentPlayer.transform);
+            follow.SetTarget(playerTarget);
         }
 
-        MinhThirdPersonController controller = persistentPlayer.GetComponent<MinhThirdPersonController>();
+        MouseLock[] mouseLocks = UnityEngine.Object.FindObjectsByType<MouseLock>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        foreach (MouseLock mouseLock in mouseLocks)
+        {
+            mouseLock.SetPlayerBody(playerTarget);
+        }
+
         if (controller != null)
         {
             controller.SetCameraTransform(persistentCamera.transform);
+        }
+    }
+
+    private static void ResolvePersistentPlayer()
+    {
+        if (persistentPlayer != null &&
+            persistentPlayer.GetComponentInChildren<MinhThirdPersonController>(true) != null)
+        {
+            return;
+        }
+
+        MinhThirdPersonController controller = UnityEngine.Object
+            .FindObjectsByType<MinhThirdPersonController>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .FirstOrDefault();
+        if (controller != null)
+        {
+            persistentPlayer = controller.transform.root.gameObject;
+            return;
+        }
+
+        GameObject namedPlayer = GameObject.Find(PlayerObjectName);
+        if (namedPlayer != null)
+        {
+            persistentPlayer = namedPlayer.transform.root.gameObject;
         }
     }
 
@@ -135,14 +244,14 @@ public static class CoffeeShopSceneTransition
             return;
         }
 
-        CharacterController characterController = persistentPlayer.GetComponent<CharacterController>();
+        CharacterController characterController = persistentPlayer.GetComponentInChildren<CharacterController>(true);
         bool controllerWasEnabled = characterController != null && characterController.enabled;
         if (characterController != null)
         {
             characterController.enabled = false;
         }
 
-        Transform playerTransform = persistentPlayer.transform;
+        Transform playerTransform = characterController != null ? characterController.transform : persistentPlayer.transform;
         playerTransform.SetPositionAndRotation(spawnPoint.transform.position, spawnPoint.transform.rotation);
 
         if (characterController != null)
@@ -151,5 +260,28 @@ public static class CoffeeShopSceneTransition
         }
 
         pendingSpawnPointId = null;
+    }
+
+    private readonly struct GameTimeSnapshot
+    {
+        public GameTimeSnapshot(
+            int day,
+            int month,
+            DayNightCycle.WeekDay weekDay,
+            float timeOfDay,
+            bool hasValue)
+        {
+            Day = day;
+            Month = month;
+            WeekDay = weekDay;
+            TimeOfDay = timeOfDay;
+            HasValue = hasValue;
+        }
+
+        public int Day { get; }
+        public int Month { get; }
+        public DayNightCycle.WeekDay WeekDay { get; }
+        public float TimeOfDay { get; }
+        public bool HasValue { get; }
     }
 }

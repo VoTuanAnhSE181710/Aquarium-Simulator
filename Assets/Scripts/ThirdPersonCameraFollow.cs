@@ -20,6 +20,7 @@ public sealed class ThirdPersonCameraFollow : MonoBehaviour
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
+        playerBody = newTarget != null ? newTarget.root : null;
     }
 
     private void Start()
