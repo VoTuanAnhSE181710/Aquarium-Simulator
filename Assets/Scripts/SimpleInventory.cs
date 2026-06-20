@@ -54,6 +54,8 @@ public sealed class SimpleInventory : MonoBehaviour
     private float placementYaw;
     private string warningMessage = "";
     private float warningTimer = 0f;
+    private bool showDebugHUD = true;
+
 
     private void Update()
     {
@@ -68,6 +70,11 @@ public sealed class SimpleInventory : MonoBehaviour
         if (keyboard == null)
         {
             return;
+        }
+
+        if (keyboard.qKey.wasPressedThisFrame)
+        {
+            showDebugHUD = !showDebugHUD;
         }
 
         if (keyboard.digit1Key.wasPressedThisFrame)
@@ -123,7 +130,12 @@ public sealed class SimpleInventory : MonoBehaviour
                 continue;
             }
 
-            float distance = (pickup.transform.position - transform.position).sqrMagnitude;
+            // Sử dụng tâm của Collider (hoặc tâm của Mesh Renderer) thay vì pivot của transform 
+            // để tránh lỗi model có pivot bị đặt lệch quá xa so với thực tế của lưới mesh
+            Collider col = pickup.GetComponent<Collider>();
+            Vector3 targetPos = col != null ? col.bounds.center : pickup.transform.position;
+            float distance = (targetPos - transform.position).sqrMagnitude;
+
             if (distance >= bestDistance)
             {
                 continue;
@@ -308,13 +320,17 @@ public sealed class SimpleInventory : MonoBehaviour
             }
         }
 
-        Vector3 dropPosition = GetDropPosition();
+        Vector3 floorPos = GetFloorPosition();
         Quaternion dropRotation = GetDropRotation(item);
         GameObject dropped = item.DropPrefab != null
-            ? Instantiate(item.DropPrefab, dropPosition, dropRotation)
+            ? Instantiate(item.DropPrefab, floorPos, dropRotation)
             : item.SceneTemplate != null
-                ? Instantiate(item.SceneTemplate, dropPosition, dropRotation)
+                ? Instantiate(item.SceneTemplate, floorPos, dropRotation)
             : GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+        // Adjust position so the bottom of the object aligns perfectly with the floor
+        float bottomOffset = GetBottomOffset(dropped);
+        dropped.transform.position = floorPos + Vector3.up * bottomOffset;
 
         // Nếu là cá, gán Water Collider của bể nước gần vị trí thả nhất trước khi Active để Start() chạy đúng
         if (isFish)
@@ -334,7 +350,7 @@ public sealed class SimpleInventory : MonoBehaviour
                         if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium") ||
                             parentName.Contains("water") || parentName.Contains("tank") || parentName.Contains("aquarium"))
                         {
-                            float dist = Vector3.Distance(dropPosition, col.bounds.ClosestPoint(dropPosition));
+                            float dist = Vector3.Distance(floorPos, col.bounds.ClosestPoint(floorPos));
                             if (dist < closestDistance)
                             {
                                 closestDistance = dist;
@@ -357,8 +373,6 @@ public sealed class SimpleInventory : MonoBehaviour
         {
             if (item.SceneTemplate == null)
             {
-                dropped.transform.position = dropPosition;
-                dropped.transform.rotation = dropRotation;
                 dropped.transform.localScale = Vector3.one * 0.35f;
             }
 
@@ -370,6 +384,20 @@ public sealed class SimpleInventory : MonoBehaviour
         }
 
         dropped.name = item.Name;
+
+        // Bật/tắt mesh nước của xô khi thả xuống sàn tùy theo trạng thái chứa nước hay rỗng
+        bool isDroppedWater = IsWaterBucket(item.Name);
+        if (IsEmptyBucket(item.Name) || isDroppedWater)
+        {
+            foreach (Transform child in dropped.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.gameObject.name.ToLower().Contains("water"))
+                {
+                    child.gameObject.SetActive(isDroppedWater);
+                }
+            }
+        }
+
         InventoryPickupItem pickup = dropped.GetComponent<InventoryPickupItem>();
         if (pickup == null)
         {
@@ -397,7 +425,7 @@ public sealed class SimpleInventory : MonoBehaviour
         return pickup != null;
     }
 
-    private Vector3 GetDropPosition()
+    private Vector3 GetFloorPosition()
     {
         Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
         if (forward.sqrMagnitude < 0.001f)
@@ -405,13 +433,67 @@ public sealed class SimpleInventory : MonoBehaviour
             forward = Vector3.forward;
         }
 
-        Vector3 position = transform.position + forward * dropDistance + Vector3.up * dropHeight;
-        if (Physics.Raycast(position + Vector3.up * 2f, Vector3.down, out RaycastHit hit, 8f, ~0, QueryTriggerInteraction.Ignore))
+        Vector3 position = transform.position + forward * dropDistance;
+        Vector3 rayStart = position;
+        rayStart.y = transform.position.y + 1.2f;
+
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 5f, ~0, QueryTriggerInteraction.Ignore))
         {
-            position.y = hit.point.y + dropHeight;
+            return hit.point;
         }
 
         return position;
+    }
+
+    private float GetBottomOffset(GameObject obj)
+    {
+        if (obj == null) return 0f;
+
+        MeshFilter[] filters = obj.GetComponentsInChildren<MeshFilter>(true);
+        if (filters.Length > 0)
+        {
+            float minLocalY = float.MaxValue;
+            foreach (MeshFilter mf in filters)
+            {
+                if (mf.sharedMesh == null) continue;
+                Bounds localBounds = mf.sharedMesh.bounds;
+                Vector3 localMin = new Vector3(localBounds.center.x, localBounds.min.y, localBounds.center.z);
+                Vector3 worldMin = mf.transform.TransformPoint(localMin);
+                Vector3 rootLocalMin = obj.transform.InverseTransformPoint(worldMin);
+                
+                if (rootLocalMin.y < minLocalY)
+                {
+                    minLocalY = rootLocalMin.y;
+                }
+            }
+
+            if (minLocalY != float.MaxValue)
+            {
+                return -minLocalY;
+            }
+        }
+
+        Collider[] colliders = obj.GetComponentsInChildren<Collider>(true);
+        if (colliders.Length > 0)
+        {
+            float minLocalY = float.MaxValue;
+            foreach (Collider col in colliders)
+            {
+                Bounds localBounds = col.bounds;
+                Vector3 worldMin = new Vector3(localBounds.center.x, localBounds.min.y, localBounds.center.z);
+                Vector3 rootLocalMin = obj.transform.InverseTransformPoint(worldMin);
+                if (rootLocalMin.y < minLocalY)
+                {
+                    minLocalY = rootLocalMin.y;
+                }
+            }
+            if (minLocalY != float.MaxValue)
+            {
+                return -minLocalY;
+            }
+        }
+
+        return 0f;
     }
 
     private Quaternion GetDropRotation(InventoryItem item)
@@ -451,26 +533,119 @@ public sealed class SimpleInventory : MonoBehaviour
             return;
         }
 
-        heldItemVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        heldItemVisual.name = "Held " + visualizedItem.Name;
-        heldItemVisual.transform.localScale = Vector3.one * 0.24f;
-
-        Collider collider = heldItemVisual.GetComponent<Collider>();
-        if (collider != null)
+        // Ưu tiên instantiate mô hình 3D thực tế của vật phẩm nếu có
+        if (visualizedItem.DropPrefab != null)
         {
-            Destroy(collider);
+            heldItemVisual = Instantiate(visualizedItem.DropPrefab);
+        }
+        else if (visualizedItem.SceneTemplate != null)
+        {
+            heldItemVisual = Instantiate(visualizedItem.SceneTemplate);
+        }
+        else
+        {
+            heldItemVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         }
 
-        Renderer renderer = heldItemVisual.GetComponent<Renderer>();
-        if (renderer != null)
+        heldItemVisual.name = "Held " + visualizedItem.Name;
+        heldItemVisual.SetActive(true);
+
+        // Vô hiệu hóa tất cả Colliders và Rigidbody trên heldItemVisual để tránh lỗi vật lý trong tay
+        foreach (Collider col in heldItemVisual.GetComponentsInChildren<Collider>(true))
         {
-            renderer.material.color = visualizedItem.Color;
+            col.enabled = false; // Vô hiệu hóa ngay lập tức!
+            Destroy(col);
+        }
+        foreach (Rigidbody rb in heldItemVisual.GetComponentsInChildren<Rigidbody>(true))
+        {
+            rb.isKinematic = true; // Thiết lập kinematic và tắt trọng lực ngay lập tức!
+            rb.useGravity = false;
+            rb.detectCollisions = false;
+            Destroy(rb);
+        }
+        
+        // Vô hiệu hóa và hủy bỏ tất cả các script logic trên đối tượng cầm trên tay để tránh chạy code thừa gây lỗi
+        foreach (MonoBehaviour mono in heldItemVisual.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (mono != null)
+            {
+                Destroy(mono);
+            }
+        }
+
+        // Vô hiệu hóa Animator trên đối tượng cầm tay để tránh xung đột hoạt ảnh xương
+        foreach (Animator animator in heldItemVisual.GetComponentsInChildren<Animator>(true))
+        {
+            animator.enabled = false;
         }
 
         Transform anchor = GetHeldItemAnchor();
-        heldItemVisual.transform.SetParent(anchor, false);
-        heldItemVisual.transform.localPosition = heldItemLocalPosition;
-        heldItemVisual.transform.localRotation = Quaternion.Euler(heldItemLocalEulerAngles);
+
+        // Xác định world scale mục tiêu cho vật thể cầm trên tay
+        Vector3 targetScale = Vector3.one;
+        GameObject source = visualizedItem.DropPrefab != null ? visualizedItem.DropPrefab : visualizedItem.SceneTemplate;
+        if (source != null)
+        {
+            targetScale = source.transform.localScale;
+        }
+
+        if (IsEmptyBucket(visualizedItem.Name) || IsWaterBucket(visualizedItem.Name))
+        {
+            targetScale = Vector3.one * 0.4f;
+        }
+        else if (source == null)
+        {
+            targetScale = Vector3.one * 0.24f;
+        }
+
+        // Thiết lập kích thước, vị trí và góc quay thế giới trước, sau đó dùng SetParent(anchor, true)
+        // để Unity tự động tính toán bù trừ tỷ lệ scale xương hoàn hảo
+        heldItemVisual.transform.localScale = targetScale;
+        heldItemVisual.transform.position = anchor.position + anchor.rotation * heldItemLocalPosition;
+        heldItemVisual.transform.rotation = anchor.rotation * Quaternion.Euler(heldItemLocalEulerAngles);
+        
+        heldItemVisual.transform.SetParent(anchor, true);
+
+        // Bật/tắt mesh nước của xô cầm tay tùy theo trạng thái chứa nước hay rỗng
+        bool isWater = IsWaterBucket(visualizedItem.Name);
+        if (IsEmptyBucket(visualizedItem.Name) || isWater)
+        {
+            foreach (Transform child in heldItemVisual.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.gameObject.name.ToLower().Contains("water"))
+                {
+                    child.gameObject.SetActive(isWater);
+                }
+            }
+        }
+
+        // Chỉnh màu sắc nếu là xô nước hoặc cube
+        Renderer[] renderers = heldItemVisual.GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer r in renderers)
+        {
+            if (IsWaterBucket(visualizedItem.Name))
+            {
+                if (r.material.HasProperty("_BaseColor"))
+                {
+                    r.material.SetColor("_BaseColor", visualizedItem.Color);
+                }
+                else
+                {
+                    r.material.color = visualizedItem.Color;
+                }
+            }
+            else if (source == null)
+            {
+                if (r.material.HasProperty("_BaseColor"))
+                {
+                    r.material.SetColor("_BaseColor", visualizedItem.Color);
+                }
+                else
+                {
+                    r.material.color = visualizedItem.Color;
+                }
+            }
+        }
     }
 
     private Transform GetHeldItemAnchor()
@@ -480,12 +655,29 @@ public sealed class SimpleInventory : MonoBehaviour
             return heldItemAnchor;
         }
 
-        heldItemAnchor =
-            FindChild("mixamorig:RightHand") ??
-            FindChild("RightHand") ??
-            FindChild("mixamorig:RightForeArm") ??
-            FindChild("RightForeArm") ??
-            transform;
+        // Tìm xương bàn tay phải không phân biệt chữ hoa thường
+        foreach (Transform child in GetComponentsInChildren<Transform>(true))
+        {
+            string nameLower = child.name.ToLower();
+            if (nameLower.Contains("righthand") || nameLower.EndsWith("righthand") || nameLower.Contains("right_hand"))
+            {
+                heldItemAnchor = child;
+                return heldItemAnchor;
+            }
+        }
+
+        // Fallback tìm cẳng tay phải
+        foreach (Transform child in GetComponentsInChildren<Transform>(true))
+        {
+            string nameLower = child.name.ToLower();
+            if (nameLower.Contains("rightforearm") || nameLower.Contains("right_forearm") || nameLower.Contains("rightarm") || nameLower.Contains("right_arm"))
+            {
+                heldItemAnchor = child;
+                return heldItemAnchor;
+            }
+        }
+
+        heldItemAnchor = transform;
         return heldItemAnchor;
     }
 
@@ -522,19 +714,38 @@ public sealed class SimpleInventory : MonoBehaviour
         }
 
         placementPreview.SetActive(true);
-        placementPreview.transform.position = GetDropPosition();
+        Vector3 floorPos = GetFloorPosition();
         placementPreview.transform.rotation = GetDropRotation(item);
+        placementPreview.transform.position = floorPos;
+        
+        float bottomOffset = GetBottomOffset(placementPreview);
+        placementPreview.transform.position = floorPos + Vector3.up * bottomOffset;
 
         if (item.SceneTemplate == null && item.DropPrefab == null)
         {
             placementPreview.transform.localScale = Vector3.one * 0.36f;
         }
+        else
+        {
+            GameObject source = item.DropPrefab != null ? item.DropPrefab : item.SceneTemplate;
+            if (source != null)
+            {
+                placementPreview.transform.localScale = source.transform.localScale;
+            }
+        }
 
         if (previewMaterial != null)
         {
             Color color = item.Color;
-            color.a = 0.35f;
-            previewMaterial.color = color;
+            color.a = 0.45f;
+            if (previewMaterial.HasProperty("_BaseColor"))
+            {
+                previewMaterial.SetColor("_BaseColor", color);
+            }
+            else
+            {
+                previewMaterial.color = color;
+            }
         }
     }
 
@@ -554,17 +765,59 @@ public sealed class SimpleInventory : MonoBehaviour
 
         foreach (Collider collider in placementPreview.GetComponentsInChildren<Collider>(true))
         {
+            collider.enabled = false; // Vô hiệu hóa ngay lập tức!
             Destroy(collider);
         }
 
         foreach (Rigidbody rigidbody in placementPreview.GetComponentsInChildren<Rigidbody>(true))
         {
+            rigidbody.isKinematic = true; // Thiết lập kinematic và tắt trọng lực ngay lập tức!
+            rigidbody.useGravity = false;
+            rigidbody.detectCollisions = false;
             Destroy(rigidbody);
         }
 
         foreach (InventoryPickupItem pickup in placementPreview.GetComponentsInChildren<InventoryPickupItem>(true))
         {
             Destroy(pickup);
+        }
+
+        // Vô hiệu hóa và hủy bỏ tất cả các script logic trên đối tượng xem trước để tránh gây lỗi
+        foreach (MonoBehaviour mono in placementPreview.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (mono != null)
+            {
+                Destroy(mono);
+            }
+        }
+
+        // Vô hiệu hóa Animator trên đối tượng xem trước để đối tượng đứng yên khi ướm thử
+        foreach (Animator animator in placementPreview.GetComponentsInChildren<Animator>(true))
+        {
+            animator.enabled = false;
+        }
+
+        // Tạo chất liệu bán trong suốt đồng nhất chuẩn URP Lit cho Hologram preview
+        previewMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        previewMaterial.SetFloat("_Surface", 1f); // Transparent
+        previewMaterial.SetFloat("_Blend", 0f); // Alpha Blend
+        previewMaterial.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        previewMaterial.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        previewMaterial.SetFloat("_ZWrite", 0f);
+        previewMaterial.DisableKeyword("_ALPHATEST_ON");
+        previewMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        previewMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        
+        Color holoColor = item.Color;
+        holoColor.a = 0.45f; // Độ mờ 45%
+
+        if (previewMaterial.HasProperty("_BaseColor"))
+        {
+            previewMaterial.SetColor("_BaseColor", holoColor);
+        }
+        else
+        {
+            previewMaterial.color = holoColor;
         }
 
         Renderer[] renderers = placementPreview.GetComponentsInChildren<Renderer>(true);
@@ -577,46 +830,37 @@ public sealed class SimpleInventory : MonoBehaviour
             }
         }
 
-        if (source != null)
+        foreach (Renderer renderer in renderers)
         {
-            previewMaterial = null; // Không dùng chất liệu trắng đè lên
-            // Giữ nguyên chất liệu và vân texture gốc của mô hình 3D, chỉ làm mờ đi
-            foreach (Renderer renderer in renderers)
+            // Thay thế tất cả chất liệu bằng chất liệu hologram để hiển thị đẹp và chuẩn URP
+            Material[] mats = new Material[renderer.sharedMaterials.Length];
+            for (int i = 0; i < mats.Length; i++)
             {
-                Material[] mats = renderer.materials;
-                for (int j = 0; j < mats.Length; j++)
-                {
-                    mats[j].SetFloat("_Surface", 1f);
-                    mats[j].SetFloat("_ZWrite", 0f);
-                    mats[j].renderQueue = 3000;
-                    mats[j].EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                    mats[j].DisableKeyword("_SURFACE_TYPE_OPAQUE");
-                    
-                    Color c = mats[j].color;
-                    c.a = 0.45f; // Làm mờ 45%
-                    mats[j].color = c;
-                }
-                renderer.materials = mats;
+                mats[i] = previewMaterial;
             }
-        }
-        else
-        {
-            // Dùng chất liệu màu phẳng cho các khối cơ bản
-            previewMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            previewMaterial.SetFloat("_Surface", 1f);
-            previewMaterial.SetFloat("_ZWrite", 0f);
-            previewMaterial.renderQueue = 3000;
-            previewMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-
-            foreach (Renderer renderer in renderers)
-            {
-                renderer.sharedMaterial = previewMaterial;
-            }
+            renderer.materials = mats;
         }
 
         if (source == null)
         {
             placementPreview.transform.localScale = Vector3.one * 0.36f;
+        }
+        else
+        {
+            placementPreview.transform.localScale = source.transform.localScale;
+        }
+
+        // Bật/tắt mesh nước của xô khi hiển thị hologram ướm thử vị trí đặt
+        bool isPreviewWater = IsWaterBucket(item.Name);
+        if (IsEmptyBucket(item.Name) || isPreviewWater)
+        {
+            foreach (Transform child in placementPreview.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.gameObject.name.ToLower().Contains("water"))
+                {
+                    child.gameObject.SetActive(isPreviewWater);
+                }
+            }
         }
 
         previewedItem = item;
@@ -645,6 +889,10 @@ public sealed class SimpleInventory : MonoBehaviour
         EnsureStyles();
         DrawHotbar();
         DrawPrompt();
+        if (showDebugHUD)
+        {
+            DrawDebugHUD();
+        }
 
         // Vẽ cảnh báo nếu có
         if (!string.IsNullOrEmpty(warningMessage) && Time.time < warningTimer)
@@ -656,6 +904,38 @@ public sealed class SimpleInventory : MonoBehaviour
             warningStyle.normal.textColor = Color.red;
             GUI.Box(rect, warningMessage, warningStyle);
         }
+    }
+
+    private void DrawDebugHUD()
+    {
+        const float w = 320f;
+        const float h = 135f;
+        Rect rect = new(16f, Screen.height - h - 16f, w, h);
+        
+        string nearestName = nearestPickup != null ? nearestPickup.ItemName : "None";
+        
+        Vector3 targetPos = nearestPickup != null ? (nearestPickup.GetComponent<Collider>() != null ? nearestPickup.GetComponent<Collider>().bounds.center : nearestPickup.transform.position) : transform.position;
+        float dist = nearestPickup != null ? Vector3.Distance(transform.position, targetPos) : 0f;
+        string distText = nearestPickup != null ? $"{dist:F2}m" : "N/A";
+        
+        string debugContent = $"<b>[ INVENTORY DEBUG HUD ]</b>\n" +
+                              $"- Slot 1: {(slots[0] == null ? "Empty" : slots[0].Name)}\n" +
+                              $"- Slot 2: {(slots[1] == null ? "Empty" : slots[1].Name)}\n" +
+                              $"- Slot 3: {(slots[2] == null ? "Empty" : slots[2].Name)}\n" +
+                              $"- Selected: Slot {selectedSlot + 1}\n" +
+                              $"- Nearest Item: {nearestName} ({distText})\n" +
+                              $"<i>(E: Pick up, G: Drop, Q: Toggle HUD)</i>";
+                              
+        GUIStyle debugStyle = new GUIStyle(GUI.skin.box)
+        {
+            alignment = TextAnchor.UpperLeft,
+            fontSize = 12,
+            padding = new RectOffset(10, 10, 8, 8),
+            wordWrap = true
+        };
+        debugStyle.normal.textColor = Color.yellow;
+        
+        GUI.Box(rect, debugContent, debugStyle);
     }
 
     private void DrawHotbar()
@@ -674,7 +954,17 @@ public sealed class SimpleInventory : MonoBehaviour
             InventoryItem item = slots[index];
             string text = item == null ? "Empty" : item.Name;
             Rect labelRect = new(rect.x + 6f, rect.y + 14f, rect.width - 12f, rect.height - 20f);
-            GUI.Label(labelRect, $"{index + 1}\n{text}", labelStyle);
+            
+            // Highlight màu vàng cho chữ của ô đang được chọn
+            GUIStyle currentLabelStyle = new GUIStyle(labelStyle);
+            if (index == selectedSlot)
+            {
+                currentLabelStyle.normal.textColor = Color.yellow;
+            }
+            
+            // Vẽ số ô kèm dấu ngoặc vuông để hiển thị rõ ô đang chọn, ví dụ: [1] thay vì 1
+            string slotNumText = index == selectedSlot ? $"[{index + 1}]" : (index + 1).ToString();
+            GUI.Label(labelRect, $"{slotNumText}\n{text}", currentLabelStyle);
         }
     }
 
@@ -746,10 +1036,38 @@ public sealed class SimpleInventory : MonoBehaviour
         return true;
     }
 
+    public InventoryItem GetSelectedItem()
+    {
+        return slots[selectedSlot];
+    }
+
+    public void ReplaceSelectedItem(InventoryItem newItem)
+    {
+        slots[selectedSlot] = newItem;
+        RefreshCarriedItemVisual();
+    }
+
     private void ShowWarning(string msg)
     {
         warningMessage = msg;
         warningTimer = Time.time + 3.0f;
+    }
+
+    public static bool IsWaterBucket(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        string lower = name.ToLower().Trim();
+        bool isBucket = lower.Contains("xô") || lower.Contains("xo") || lower.Contains("bucket");
+        bool isWater = lower.Contains("nước") || lower.Contains("nuoc") || lower.Contains("water") || lower.Contains("wet");
+        return isBucket && isWater;
+    }
+
+    public static bool IsEmptyBucket(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        string lower = name.ToLower().Trim();
+        bool isBucket = lower.Contains("xô") || lower.Contains("xo") || lower.Contains("bucket");
+        return isBucket && !IsWaterBucket(name);
     }
 }
 

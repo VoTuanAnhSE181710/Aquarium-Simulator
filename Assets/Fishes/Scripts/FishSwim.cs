@@ -81,8 +81,14 @@ public class FishSwim : MonoBehaviour
     private int speedParamHash;
     private bool hasSpeedParam = false;
 
+    // Các chỉ số sức khỏe nuôi cá
+    public float health = 100f;
+    public bool isDead = false;
+    private float originalSpeed;
+
     void Start()
     {
+        originalSpeed = speed;
         animator = GetComponentInChildren<Animator>();
         if (animator != null)
         {
@@ -186,6 +192,20 @@ public class FishSwim : MonoBehaviour
 
             SetupPath();
             StartSwimming();
+
+            // Tự động thêm InventoryPickupItem vào cá khi còn sống nếu ở trong bể cá gia đình để người chơi có thể nhặt lên
+            FishTankWaterQuality waterQuality = waterCollider.GetComponentInParent<FishTankWaterQuality>();
+            if (waterQuality != null)
+            {
+                InventoryPickupItem livePickup = GetComponent<InventoryPickupItem>();
+                if (livePickup == null)
+                {
+                    livePickup = gameObject.AddComponent<InventoryPickupItem>();
+                }
+                string cleanName = gameObject.name.Replace("(Clone)", "").Replace("Template", "").Trim();
+                cleanName = System.Text.RegularExpressions.Regex.Replace(cleanName, @"\s*\(?\d+\)?$", "").Trim();
+                livePickup.Configure(cleanName, Color.white, null);
+            }
         }
         else
         {
@@ -197,6 +217,16 @@ public class FishSwim : MonoBehaviour
     void Update()
     {
         if (waterCollider == null) return;
+
+        // 1. Quản lý Sức khỏe & Trạng thái sống chết của cá
+        HandleHealthAndDeath();
+
+        if (isDead)
+        {
+            // Trạng thái đã chết: trôi ngửa bụng lên mặt nước
+            HandleDeadState();
+            return;
+        }
 
         // Xử lý khi cá đang NGHỈ NGƠI
         if (isResting)
@@ -453,6 +483,113 @@ public class FishSwim : MonoBehaviour
             
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireCube(center, new Vector3(sizeX, sizeY, sizeZ));
+        }
+    }
+
+    private void HandleHealthAndDeath()
+    {
+        if (isDead) return;
+
+        // Tìm component quản lý chất lượng nước gắn trên bể cá (hoặc cụm bể)
+        FishTankWaterQuality waterQuality = waterCollider.GetComponentInParent<FishTankWaterQuality>();
+        if (waterQuality == null)
+        {
+            // Bể cá ở cửa hàng (hoặc không có quản lý nước) -> cá bất tử
+            health = 100f;
+            speed = originalSpeed;
+            return;
+        }
+
+        // Nhận các thông số chất lượng nước
+        float cleanliness = waterQuality.Cleanliness;
+        float oxygen = waterQuality.Oxygen;
+        float chlorine = waterQuality.Chlorine;
+
+        bool isToxic = false;
+
+        // a. Độ sạch kém (< 30%): trừ 1.5 máu/giây
+        if (cleanliness < 0.3f)
+        {
+            health -= Time.deltaTime * 1.5f;
+            isToxic = true;
+        }
+
+        // b. Thiếu Oxi (< 20%): trừ 3.0 máu/giây (nguy hiểm)
+        if (oxygen < 0.2f)
+        {
+            health -= Time.deltaTime * 3.0f;
+            isToxic = true;
+        }
+
+        // c. Nồng độ Clor cao (> 30%): trừ 2.5 máu/giây (ngộ độc)
+        if (chlorine > 0.3f)
+        {
+            health -= Time.deltaTime * 2.5f;
+            isToxic = true;
+        }
+
+        // Nếu môi trường tốt: tự hồi phục 1.0 máu/giây
+        if (!isToxic)
+        {
+            health = Mathf.Min(100f, health + Time.deltaTime * 1.0f);
+        }
+
+        // Tốc độ cá tỷ lệ thuận với sức khỏe & độ sạch (bơi lờ đờ khi mệt mỏi)
+        float speedMultiplier = Mathf.Lerp(0.3f, 1.0f, health / 100f);
+        if (cleanliness < 0.4f)
+        {
+            speedMultiplier *= 0.4f; // Giảm thêm tốc độ khi nước bẩn
+        }
+        speed = originalSpeed * speedMultiplier;
+
+        // Chết khi máu về 0
+        if (health <= 0f)
+        {
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        isDead = true;
+        health = 0f;
+        speed = 0f;
+
+        // Vô hiệu hóa Animator để dừng mọi hoạt động bơi lội uốn éo
+        if (animator != null)
+        {
+            animator.enabled = false;
+        }
+
+        // Tự động thêm InventoryPickupItem vào cá để người chơi có thể nhặt xác cá chết dọn bể
+        InventoryPickupItem pickup = GetComponent<InventoryPickupItem>();
+        if (pickup == null)
+        {
+            pickup = gameObject.AddComponent<InventoryPickupItem>();
+        }
+        // Đặt tên hiển thị là "Xác Cá..." để người chơi biết
+        string displayName = "Xác " + gameObject.name.Replace("(Clone)", "").Replace("Template", "").Trim();
+        pickup.Configure(displayName, Color.white, null);
+
+        Debug.Log($"{gameObject.name} đã chết ngửa bụng!");
+    }
+
+    private void HandleDeadState()
+    {
+        // 1. Xoay ngửa bụng (Z = 180 độ)
+        Quaternion targetRot = Quaternion.Euler(transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, 180f);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 5f * Time.deltaTime);
+
+        // 2. Nổi từ từ lên sát mặt nước (bounds.max.y)
+        if (waterCollider != null)
+        {
+            float surfaceY = waterCollider.bounds.max.y - marginY;
+            if (transform.position.y < surfaceY)
+            {
+                Vector3 pos = transform.position;
+                pos.y = Mathf.MoveTowards(pos.y, surfaceY, 0.2f * Time.deltaTime);
+                transform.position = pos;
+            }
         }
     }
 }

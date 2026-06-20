@@ -6,7 +6,17 @@ public sealed class InventoryPickupItem : MonoBehaviour
     [SerializeField] private Color itemColor = Color.white;
     [SerializeField] private GameObject dropPrefab;
 
-    public string ItemName => string.IsNullOrWhiteSpace(itemName) ? gameObject.name : itemName;
+    public string ItemName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(itemName) || itemName == "Item")
+            {
+                return gameObject.name;
+            }
+            return itemName;
+        }
+    }
     public Color ItemColor => itemColor;
     public GameObject DropPrefab => dropPrefab;
 
@@ -95,6 +105,11 @@ public sealed class InventoryPickupItem : MonoBehaviour
             rigidbody.useGravity = false;
             rigidbody.isKinematic = true;
         }
+        else if (IsFurnitureName(ItemName) || IsBucketName(ItemName))
+        {
+            rigidbody.useGravity = false;
+            rigidbody.isKinematic = true;
+        }
         else
         {
             rigidbody.useGravity = useDynamicPhysics;
@@ -121,5 +136,22 @@ public sealed class InventoryPickupItem : MonoBehaviour
         {
             child.gameObject.isStatic = isStatic;
         }
+    }
+
+    private static bool IsFurnitureName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        string lower = name.ToLower().Trim();
+        return lower.StartsWith("chair") ||
+               lower.StartsWith("table") ||
+               lower.StartsWith("bed") ||
+               lower.StartsWith("closet");
+    }
+
+    private static bool IsBucketName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        string lower = name.ToLower().Trim();
+        return lower.Contains("bucket") || lower.Contains("xô") || lower.Contains("xo");
     }
 }
