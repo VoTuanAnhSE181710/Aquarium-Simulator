@@ -52,6 +52,8 @@ public sealed class SimpleInventory : MonoBehaviour
     private GUIStyle labelStyle;
     private int selectedSlot;
     private float placementYaw;
+    private string warningMessage = "";
+    private float warningTimer = 0f;
 
     private void Update()
     {
@@ -248,6 +250,43 @@ public sealed class SimpleInventory : MonoBehaviour
         if (item == null)
         {
             return false;
+        }
+
+        // Kiểm tra khoảng cách tới bể nước nếu vật phẩm thả là cá
+        if (item.Name.StartsWith("Cá") || item.Name.StartsWith("Ca") || item.Name.ToLower().Contains("fish"))
+        {
+            Collider waterCol = null;
+            // Tìm tất cả Collider trong scene, kiểm tra xem tên object hoặc cha của nó có chứa chữ liên quan bể cá không
+            foreach (Collider col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
+            {
+                if (col.isTrigger)
+                {
+                    string name = col.gameObject.name.ToLower();
+                    string parentName = col.transform.parent != null ? col.transform.parent.gameObject.name.ToLower() : "";
+                    
+                    if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium") ||
+                        parentName.Contains("water") || parentName.Contains("tank") || parentName.Contains("aquarium"))
+                    {
+                        waterCol = col;
+                        break;
+                    }
+                }
+            }
+
+            if (waterCol != null)
+            {
+                float distToWater = Vector3.Distance(transform.position, waterCol.bounds.ClosestPoint(transform.position));
+                if (distToWater > 3.8f) // Giới hạn khoảng cách thả cá trong khoảng 3.8 mét
+                {
+                    ShowWarning("Hãy lại gần bể cá để thả cá vào!");
+                    return false;
+                }
+            }
+            else
+            {
+                ShowWarning("Không tìm thấy bể cá nào trong phòng!");
+                return false;
+            }
         }
 
         Vector3 dropPosition = GetDropPosition();
@@ -512,6 +551,17 @@ public sealed class SimpleInventory : MonoBehaviour
         EnsureStyles();
         DrawHotbar();
         DrawPrompt();
+
+        // Vẽ cảnh báo nếu có
+        if (!string.IsNullOrEmpty(warningMessage) && Time.time < warningTimer)
+        {
+            const float w = 350f;
+            const float h = 42f;
+            Rect rect = new((Screen.width - w) * 0.5f, Screen.height - 180f, w, h);
+            GUIStyle warningStyle = new GUIStyle(slotStyle);
+            warningStyle.normal.textColor = Color.red;
+            GUI.Box(rect, warningMessage, warningStyle);
+        }
     }
 
     private void DrawHotbar()
@@ -581,4 +631,31 @@ public sealed class SimpleInventory : MonoBehaviour
             normal = { textColor = Color.white }
         };
     }
+
+    public bool IsFull()
+    {
+        return GetFirstEmptySlot() < 0;
+    }
+
+    public bool AddItem(string itemName, Color itemColor, GameObject dropPrefab, GameObject sceneTemplate = null)
+    {
+        int emptySlot = GetFirstEmptySlot();
+        if (emptySlot < 0)
+        {
+            return false;
+        }
+        slots[emptySlot] = new InventoryItem(itemName, itemColor, dropPrefab, sceneTemplate);
+        if (emptySlot == selectedSlot)
+        {
+            RefreshCarriedItemVisual();
+        }
+        return true;
+    }
+
+    private void ShowWarning(string msg)
+    {
+        warningMessage = msg;
+        warningTimer = Time.time + 3.0f;
+    }
 }
+

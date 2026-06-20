@@ -93,8 +93,59 @@ public class FishSwim : MonoBehaviour
             }
         }
 
+        // Tự động tìm Water Collider trong scene nếu chưa kéo thả
+        if (waterCollider == null)
+        {
+            foreach (Collider col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
+            {
+                if (col.isTrigger)
+                {
+                    string name = col.gameObject.name.ToLower();
+                    string parentName = col.transform.parent != null ? col.transform.parent.gameObject.name.ToLower() : "";
+                    
+                    if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium") ||
+                        parentName.Contains("water") || parentName.Contains("tank") || parentName.Contains("aquarium"))
+                    {
+                        waterCollider = col;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Đảm bảo cá không bị rơi xuống do trọng lực và có thể tự do di chuyển
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+
+        // Tự động tính toán Margin an toàn dựa trên kích thước thật của model cá để tránh tràn viền/xuyên kính
+        Renderer fishRenderer = GetComponentInChildren<Renderer>();
+        if (fishRenderer != null)
+        {
+            float fishLength = Mathf.Max(fishRenderer.bounds.size.x, fishRenderer.bounds.size.z);
+            float idealMargin = (fishLength * 0.5f) + 0.08f; // Nửa chiều dài cá + 8cm khoảng cách an toàn
+            marginX = Mathf.Max(marginX, idealMargin);
+            marginZ = Mathf.Max(marginZ, idealMargin);
+            marginY = Mathf.Max(marginY, (fishRenderer.bounds.size.y * 0.5f) + 0.05f);
+        }
+
         if (waterCollider != null)
         {
+            // Giới hạn vị trí ban đầu của cá luôn nằm gọn trong bể nước
+            Bounds bounds = waterCollider.bounds;
+            Vector3 pos = transform.position;
+            float clampMarginX = Mathf.Min(marginX, bounds.size.x * 0.45f);
+            float clampMarginY = Mathf.Min(marginY, bounds.size.y * 0.45f);
+            float clampMarginZ = Mathf.Min(marginZ, bounds.size.z * 0.45f);
+
+            pos.x = Mathf.Clamp(pos.x, bounds.min.x + clampMarginX, bounds.max.x - clampMarginX);
+            pos.y = Mathf.Clamp(pos.y, bounds.min.y + clampMarginY, bounds.max.y - clampMarginY);
+            pos.z = Mathf.Clamp(pos.z, bounds.min.z + clampMarginZ, bounds.max.z - clampMarginZ);
+            transform.position = pos;
+
             SetupPath();
             StartSwimming();
         }
@@ -103,6 +154,7 @@ public class FishSwim : MonoBehaviour
             Debug.LogError("Vui lòng kéo WaterCube vào ô Water Collider của cá!");
         }
     }
+
 
     void Update()
     {
