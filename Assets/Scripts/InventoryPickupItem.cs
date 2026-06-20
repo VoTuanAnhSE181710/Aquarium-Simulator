@@ -52,16 +52,33 @@ public sealed class InventoryPickupItem : MonoBehaviour
     {
         SetStaticRecursively(transform, false);
 
-        if (GetComponent<Collider>() == null)
+        Collider collider = GetComponent<Collider>();
+        if (collider == null)
         {
-            BoxCollider collider = gameObject.AddComponent<BoxCollider>();
+            BoxCollider boxCollider = gameObject.AddComponent<BoxCollider>();
             Renderer renderer = GetComponentInChildren<Renderer>();
             if (renderer != null)
             {
                 Bounds bounds = renderer.bounds;
-                collider.center = transform.InverseTransformPoint(bounds.center);
-                collider.size = AbsVector(transform.InverseTransformVector(bounds.size));
+                boxCollider.center = transform.InverseTransformPoint(bounds.center);
+                Vector3 size = AbsVector(transform.InverseTransformVector(bounds.size));
+                
+                // Nếu là cá, đảm bảo kích thước collider tối thiểu đủ lớn (0.8m) để người chơi dễ ngắm và nhặt lại
+                if (GetComponentInChildren<FishSwim>(true) != null || ItemName.ToLower().Contains("fish") || ItemName.ToLower().Contains("ca"))
+                {
+                    size.x = Mathf.Max(size.x, 0.8f);
+                    size.y = Mathf.Max(size.y, 0.8f);
+                    size.z = Mathf.Max(size.z, 0.8f);
+                }
+                boxCollider.size = size;
             }
+            collider = boxCollider;
+        }
+
+        // Nếu là cá, chuyển collider thành Trigger để không cản trở di chuyển vật lý của cá và dễ nhặt
+        if (GetComponentInChildren<FishSwim>(true) != null || ItemName.ToLower().Contains("fish") || ItemName.ToLower().Contains("ca"))
+        {
+            collider.isTrigger = true;
         }
 
         Rigidbody rigidbody = GetComponent<Rigidbody>();
@@ -71,12 +88,23 @@ public sealed class InventoryPickupItem : MonoBehaviour
         }
 
         rigidbody.mass = 1f;
-        rigidbody.useGravity = useDynamicPhysics;
-        rigidbody.isKinematic = !useDynamicPhysics;
+        
+        // Nếu là cá, luôn giữ kinematic và không dùng gravity để cá tự do bơi lội
+        if (GetComponentInChildren<FishSwim>(true) != null || ItemName.ToLower().Contains("fish") || ItemName.ToLower().Contains("ca"))
+        {
+            rigidbody.useGravity = false;
+            rigidbody.isKinematic = true;
+        }
+        else
+        {
+            rigidbody.useGravity = useDynamicPhysics;
+            rigidbody.isKinematic = !useDynamicPhysics;
+        }
+        
         rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
         rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
-        if (useDynamicPhysics)
+        if (useDynamicPhysics && !rigidbody.isKinematic)
         {
             rigidbody.WakeUp();
         }

@@ -252,11 +252,27 @@ public sealed class SimpleInventory : MonoBehaviour
             return false;
         }
 
-        // Kiểm tra khoảng cách tới bể nước nếu vật phẩm thả là cá
-        if (item.Name.StartsWith("Cá") || item.Name.StartsWith("Ca") || item.Name.ToLower().Contains("fish"))
+        // Kiểm tra xem vật phẩm thả có phải là cá hay không bằng component hoặc tên hiển thị
+        bool isFish = false;
+        if (item.DropPrefab != null && item.DropPrefab.GetComponentInChildren<FishSwim>(true) != null)
         {
-            Collider waterCol = null;
-            // Tìm tất cả Collider trong scene, kiểm tra xem tên object hoặc cha của nó có chứa chữ liên quan bể cá không
+            isFish = true;
+        }
+        else if (item.SceneTemplate != null && item.SceneTemplate.GetComponentInChildren<FishSwim>(true) != null)
+        {
+            isFish = true;
+        }
+        else if (item.Name.StartsWith("Cá") || item.Name.StartsWith("Ca") || item.Name.ToLower().Contains("fish"))
+        {
+            isFish = true;
+        }
+
+        if (isFish)
+        {
+            Collider nearestWaterCol = null;
+            float closestDistance = float.MaxValue;
+
+            // Tìm tất cả Collider trong scene, chọn cái GẦN NHẤT
             foreach (Collider col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
             {
                 if (col.isTrigger)
@@ -267,16 +283,19 @@ public sealed class SimpleInventory : MonoBehaviour
                     if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium") ||
                         parentName.Contains("water") || parentName.Contains("tank") || parentName.Contains("aquarium"))
                     {
-                        waterCol = col;
-                        break;
+                        float dist = Vector3.Distance(transform.position, col.bounds.ClosestPoint(transform.position));
+                        if (dist < closestDistance)
+                        {
+                            closestDistance = dist;
+                            nearestWaterCol = col;
+                        }
                     }
                 }
             }
 
-            if (waterCol != null)
+            if (nearestWaterCol != null)
             {
-                float distToWater = Vector3.Distance(transform.position, waterCol.bounds.ClosestPoint(transform.position));
-                if (distToWater > 3.8f) // Giới hạn khoảng cách thả cá trong khoảng 3.8 mét
+                if (closestDistance > 4.5f) // Giới hạn khoảng cách thả cá (tăng lên 4.5 mét cho người chơi dễ thả)
                 {
                     ShowWarning("Hãy lại gần bể cá để thả cá vào!");
                     return false;
@@ -296,6 +315,41 @@ public sealed class SimpleInventory : MonoBehaviour
             : item.SceneTemplate != null
                 ? Instantiate(item.SceneTemplate, dropPosition, dropRotation)
             : GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+        // Nếu là cá, gán Water Collider của bể nước gần vị trí thả nhất trước khi Active để Start() chạy đúng
+        if (isFish)
+        {
+            FishSwim swim = dropped.GetComponentInChildren<FishSwim>(true);
+            if (swim != null)
+            {
+                Collider nearestWaterCol = null;
+                float closestDistance = float.MaxValue;
+                foreach (Collider col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
+                {
+                    if (col.isTrigger)
+                    {
+                        string name = col.gameObject.name.ToLower();
+                        string parentName = col.transform.parent != null ? col.transform.parent.gameObject.name.ToLower() : "";
+                        
+                        if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium") ||
+                            parentName.Contains("water") || parentName.Contains("tank") || parentName.Contains("aquarium"))
+                        {
+                            float dist = Vector3.Distance(dropPosition, col.bounds.ClosestPoint(dropPosition));
+                            if (dist < closestDistance)
+                            {
+                                closestDistance = dist;
+                                nearestWaterCol = col;
+                            }
+                        }
+                    }
+                }
+
+                if (nearestWaterCol != null)
+                {
+                    swim.waterCollider = nearestWaterCol;
+                }
+            }
+        }
 
         dropped.SetActive(true);
 
@@ -323,7 +377,21 @@ public sealed class SimpleInventory : MonoBehaviour
         }
 
         pickup.Configure(item.Name, item.Color, item.DropPrefab);
-        pickup.EnableDroppedPhysics();
+
+        // Nếu là cá, không kích hoạt trọng lực/kinematic rơi tự do để tránh làm cá rơi xuống đáy và lỗi bơi
+        if (isFish)
+        {
+            Rigidbody rb = dropped.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+        }
+        else
+        {
+            pickup.EnableDroppedPhysics();
+        }
         slots[selectedSlot] = null;
         RefreshCarriedItemVisual();
         return pickup != null;

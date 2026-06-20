@@ -97,22 +97,56 @@ public class FishSwim : MonoBehaviour
             }
         }
 
-        // Tự động tìm Water Collider trong scene nếu chưa kéo thả
+        // Tự động tìm Water Collider gần nhất trong scene nếu chưa được gán trước (kéo thả hoặc thiết lập động)
         if (waterCollider == null)
         {
-            foreach (Collider col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
+            // 1. Thử tìm water collider trong cùng cụm cha (ví dụ cùng nằm trong một cụm bể) để tránh lệch vị trí thiết kế
+            Transform current = transform.parent;
+            while (current != null && waterCollider == null)
             {
-                if (col.isTrigger)
+                foreach (Collider col in current.GetComponentsInChildren<Collider>(true))
                 {
-                    string name = col.gameObject.name.ToLower();
-                    string parentName = col.transform.parent != null ? col.transform.parent.gameObject.name.ToLower() : "";
-                    
-                    if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium") ||
-                        parentName.Contains("water") || parentName.Contains("tank") || parentName.Contains("aquarium"))
+                    if (col.isTrigger)
                     {
-                        waterCollider = col;
-                        break;
+                        string name = col.gameObject.name.ToLower();
+                        if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium"))
+                        {
+                            waterCollider = col;
+                            break;
+                        }
                     }
+                }
+                current = current.parent;
+            }
+
+            // 2. Nếu vẫn không thấy, tìm water collider gần nhất trong toàn bộ scene
+            if (waterCollider == null)
+            {
+                Collider closestCol = null;
+                float minDistance = float.MaxValue;
+                foreach (Collider col in FindObjectsByType<Collider>(FindObjectsSortMode.None))
+                {
+                    if (col.isTrigger)
+                    {
+                        string name = col.gameObject.name.ToLower();
+                        string parentName = col.transform.parent != null ? col.transform.parent.gameObject.name.ToLower() : "";
+                        
+                        if (name.Contains("water") || name.Contains("tank") || name.Contains("inside") || name.Contains("aquarium") ||
+                            parentName.Contains("water") || parentName.Contains("tank") || parentName.Contains("aquarium"))
+                        {
+                            float dist = Vector3.Distance(transform.position, col.bounds.ClosestPoint(transform.position));
+                            if (dist < minDistance)
+                            {
+                                minDistance = dist;
+                                closestCol = col;
+                            }
+                        }
+                    }
+                }
+
+                if (closestCol != null)
+                {
+                    waterCollider = closestCol;
                 }
             }
         }
