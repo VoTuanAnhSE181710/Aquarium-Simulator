@@ -499,12 +499,6 @@ public sealed class SimpleInventory : MonoBehaviour
             Destroy(pickup);
         }
 
-        previewMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        previewMaterial.SetFloat("_Surface", 1f);
-        previewMaterial.SetFloat("_ZWrite", 0f);
-        previewMaterial.renderQueue = 3000;
-        previewMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-
         Renderer[] renderers = placementPreview.GetComponentsInChildren<Renderer>(true);
         if (renderers.Length == 0)
         {
@@ -515,9 +509,41 @@ public sealed class SimpleInventory : MonoBehaviour
             }
         }
 
-        foreach (Renderer renderer in renderers)
+        if (source != null)
         {
-            renderer.sharedMaterial = previewMaterial;
+            previewMaterial = null; // Không dùng chất liệu trắng đè lên
+            // Giữ nguyên chất liệu và vân texture gốc của mô hình 3D, chỉ làm mờ đi
+            foreach (Renderer renderer in renderers)
+            {
+                Material[] mats = renderer.materials;
+                for (int j = 0; j < mats.Length; j++)
+                {
+                    mats[j].SetFloat("_Surface", 1f);
+                    mats[j].SetFloat("_ZWrite", 0f);
+                    mats[j].renderQueue = 3000;
+                    mats[j].EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    mats[j].DisableKeyword("_SURFACE_TYPE_OPAQUE");
+                    
+                    Color c = mats[j].color;
+                    c.a = 0.45f; // Làm mờ 45%
+                    mats[j].color = c;
+                }
+                renderer.materials = mats;
+            }
+        }
+        else
+        {
+            // Dùng chất liệu màu phẳng cho các khối cơ bản
+            previewMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            previewMaterial.SetFloat("_Surface", 1f);
+            previewMaterial.SetFloat("_ZWrite", 0f);
+            previewMaterial.renderQueue = 3000;
+            previewMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+
+            foreach (Renderer renderer in renderers)
+            {
+                renderer.sharedMaterial = previewMaterial;
+            }
         }
 
         if (source == null)

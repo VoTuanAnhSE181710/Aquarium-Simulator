@@ -9,7 +9,10 @@ public class FishStoreMerchant : MonoBehaviour
     {
         public string name;
         public int price;
-        public GameObject template;
+        public GameObject template; // Dành cho cấu hình đơn lẻ trong Inspector
+        [HideInInspector]
+        public List<GameObject> templates; // Danh sách các bản mẫu kích thước khác nhau ở runtime
+        public string group; // Nhóm loài cá (Ví dụ: Cá Cảnh, Cá Rồng...)
     }
 
     [Header("Cài đặt tương tác")]
@@ -25,6 +28,8 @@ public class FishStoreMerchant : MonoBehaviour
     private SimpleInventory playerInventory;
     private MinhThirdPersonController playerController;
     private List<FishProduct> activeProducts = new List<FishProduct>();
+    private List<string> categories = new List<string>();
+    private int selectedCategoryIndex = 0;
     private bool isPlayerNear;
     
     private GUIStyle promptStyle;
@@ -45,7 +50,37 @@ public class FishStoreMerchant : MonoBehaviour
         }
         else
         {
-            activeProducts = new List<FishProduct>(customProducts);
+            activeProducts = new List<FishProduct>();
+            foreach (var prod in customProducts)
+            {
+                FishProduct sanitized = prod;
+                if (string.IsNullOrEmpty(sanitized.group))
+                {
+                    sanitized.group = "Cá Cảnh";
+                }
+                
+                // Đảm bảo list templates được khởi tạo từ template đơn lẻ của Inspector
+                if (sanitized.templates == null || sanitized.templates.Count == 0)
+                {
+                    sanitized.templates = new List<GameObject>();
+                    if (prod.template != null)
+                    {
+                        sanitized.templates.Add(prod.template);
+                    }
+                }
+                activeProducts.Add(sanitized);
+            }
+        }
+
+        // Tạo danh mục nhóm cá độc nhất
+        categories.Clear();
+        categories.Add("Tất Cả");
+        foreach (var prod in activeProducts)
+        {
+            if (!string.IsNullOrEmpty(prod.group) && !categories.Contains(prod.group))
+            {
+                categories.Add(prod.group);
+            }
         }
     }
 
@@ -63,36 +98,53 @@ public class FishStoreMerchant : MonoBehaviour
     private void InitializeDefaultProducts()
     {
         FishSwim[] sceneFishes = FindObjectsByType<FishSwim>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        HashSet<string> uniqueNames = new HashSet<string>();
+        
+        // Dictionary để gom nhóm các con cá cùng loài (có kích thước scale khác nhau)
+        Dictionary<string, FishProduct> productDict = new Dictionary<string, FishProduct>();
 
         foreach (FishSwim fish in sceneFishes)
         {
-            // Bỏ các ký tự clone/template để có tên sạch
+            // Bỏ các ký tự clone/template và cả số thứ tự tự động của Unity (ví dụ " 1", "(2)", etc.)
             string cleanName = fish.gameObject.name.Replace(" Template", "").Replace("(Clone)", "").Trim();
-            if (uniqueNames.Contains(cleanName)) continue;
-            uniqueNames.Add(cleanName);
+            cleanName = System.Text.RegularExpressions.Regex.Replace(cleanName, @"\s*\(?\d+\)?$", "").Trim();
 
-            // Tạo bản sao làm template ẩn
+            // Tạo bản sao làm template ẩn (Lưu giữ nguyên tỉ lệ kích thước thật của con cá này trong scene)
             GameObject template = Instantiate(fish.gameObject);
             template.name = cleanName;
             template.SetActive(false);
             DontDestroyOnLoad(template);
 
-            // Định giá dựa trên tên cá
-            int price = 1000;
-            if (cleanName.Contains("Rong")) price = 5000;
-            else if (cleanName.Contains("Lahan") || cleanName.Contains("lahan")) price = 3000;
-            else if (cleanName.Contains("Beta") || cleanName.Contains("beta")) price = 1500;
-            else if (cleanName.Contains("Mau") || cleanName.Contains("mau")) price = 500;
-            else if (cleanName.Contains("Cho") || cleanName.Contains("cho")) price = 800;
-
-            activeProducts.Add(new FishProduct
+            if (productDict.ContainsKey(cleanName))
             {
-                name = cleanName,
-                price = price,
-                template = template
-            });
+                // Nếu loài cá này đã có, thêm bản mẫu kích thước này vào danh sách
+                productDict[cleanName].templates.Add(template);
+            }
+            else
+            {
+                // Định giá dựa trên tên cá
+                int price = 1000;
+                if (cleanName.Contains("Rong")) price = 5000;
+                else if (cleanName.Contains("Lahan") || cleanName.Contains("lahan")) price = 3000;
+                else if (cleanName.Contains("Beta") || cleanName.Contains("beta")) price = 1500;
+                else if (cleanName.Contains("Mau") || cleanName.Contains("mau")) price = 500;
+                else if (cleanName.Contains("Cho") || cleanName.Contains("cho")) price = 800;
+
+                // Lấy nhóm của cá
+                string group = string.IsNullOrEmpty(fish.fishGroup) ? "Cá Cảnh" : fish.fishGroup;
+
+                FishProduct newProduct = new FishProduct
+                {
+                    name = cleanName,
+                    price = price,
+                    templates = new List<GameObject> { template },
+                    group = group
+                };
+                productDict[cleanName] = newProduct;
+            }
         }
+
+        // Đưa các sản phẩm đã gom nhóm vào activeProducts
+        activeProducts = new List<FishProduct>(productDict.Values);
     }
 
     private void Update()
@@ -190,21 +242,57 @@ public class FishStoreMerchant : MonoBehaviour
             GUI.Box(winRect, "", windowStyle);
             
             // Vẽ Tiêu đề
-            GUI.Label(new Rect(winRect.x + 20f, winRect.y + 20f, winWidth - 40f, 35f), "CỬA HÀNG BÁN CÁ", titleStyle);
+            GUI.Label(new Rect(winRect.x + 20f, winRect.y + 15f, winWidth - 40f, 30f), "CỬA HÀNG BÁN CÁ", titleStyle);
             
             // Vẽ Tiền tệ
             int currentMoney = PlayerMoneyDisplay.CurrentMoney;
-            GUI.Label(new Rect(winRect.x + 20f, winRect.y + 55f, winWidth - 40f, 25f), $"Tiền của bạn: {PlayerMoneyDisplay.FormatVnd(currentMoney)}", labelStyle);
+            GUI.Label(new Rect(winRect.x + 20f, winRect.y + 45f, winWidth - 40f, 20f), $"Tiền của bạn: {PlayerMoneyDisplay.FormatVnd(currentMoney)}", labelStyle);
+
+            // Vẽ hàng Tab phân loại nhóm cá
+            float totalWidth = winWidth - 40f;
+            float tabGap = 4f;
+            float tabWidth = (totalWidth - (categories.Count - 1) * tabGap) / categories.Count;
+            float startTabX = winRect.x + 20f;
+            float tabY = winRect.y + 70f;
+            
+            for (int c = 0; c < categories.Count; c++)
+            {
+                Rect tabRect = new Rect(startTabX + c * (tabWidth + tabGap), tabY, tabWidth, 28f);
+                
+                GUIStyle tabStyle = new GUIStyle(GUI.skin.button);
+                if (c == selectedCategoryIndex)
+                {
+                    tabStyle.normal.textColor = Color.cyan;
+                    tabStyle.fontStyle = FontStyle.Bold;
+                }
+                
+                if (GUI.Button(tabRect, categories[c], tabStyle))
+                {
+                    selectedCategoryIndex = c;
+                    scrollPosition = Vector2.zero;
+                }
+            }
+
+            // Lọc danh sách cá theo nhóm được chọn
+            List<FishProduct> displayProducts = new List<FishProduct>();
+            string currentCategory = categories[selectedCategoryIndex];
+            foreach (var prod in activeProducts)
+            {
+                if (currentCategory == "Tất Cả" || prod.group == currentCategory)
+                {
+                    displayProducts.Add(prod);
+                }
+            }
 
             // Khu vực cuộn danh sách sản phẩm
-            Rect scrollArea = new Rect(winRect.x + 20f, winRect.y + 90f, winWidth - 40f, winHeight - 160f);
-            Rect viewRect = new Rect(0, 0, scrollArea.width - 20f, activeProducts.Count * 70f);
+            Rect scrollArea = new Rect(winRect.x + 20f, winRect.y + 110f, winWidth - 40f, winHeight - 175f);
+            Rect viewRect = new Rect(0, 0, scrollArea.width - 20f, displayProducts.Count * 70f);
             
             scrollPosition = GUI.BeginScrollView(scrollArea, scrollPosition, viewRect);
             
-            for (int i = 0; i < activeProducts.Count; i++)
+            for (int i = 0; i < displayProducts.Count; i++)
             {
-                FishProduct prod = activeProducts[i];
+                FishProduct prod = displayProducts[i];
                 float itemY = i * 70f;
                 
                 // Khung sản phẩm
@@ -247,10 +335,20 @@ public class FishStoreMerchant : MonoBehaviour
             return;
         }
 
+        if (product.templates == null || product.templates.Count == 0)
+        {
+            Debug.LogWarning("Không có bản mẫu cá nào để mua!");
+            return;
+        }
+
         if (PlayerMoneyDisplay.TrySpendMoney(product.price))
         {
-            // Tạo bản sao mới từ template để đưa vào túi đồ
-            GameObject fishItemTemplate = Instantiate(product.template);
+            // Chọn ngẫu nhiên 1 kích thước/bản mẫu trong danh sách các con cá cùng loài tìm thấy trong bể
+            int randomIndex = Random.Range(0, product.templates.Count);
+            GameObject chosenTemplate = product.templates[randomIndex];
+
+            // Tạo bản sao mới từ template được chọn để đưa vào túi đồ (đảm bảo giữ nguyên scale kích thước của con đó)
+            GameObject fishItemTemplate = Instantiate(chosenTemplate);
             fishItemTemplate.name = product.name;
             fishItemTemplate.SetActive(false);
             DontDestroyOnLoad(fishItemTemplate);
@@ -258,7 +356,7 @@ public class FishStoreMerchant : MonoBehaviour
             bool success = playerInventory.AddItem(product.name, Color.white, null, fishItemTemplate);
             if (success)
             {
-                Debug.Log($"Đã mua thành công {product.name}!");
+                Debug.Log($"Đã mua thành công {product.name} (Chọn ngẫu nhiên mẫu kích thước #{randomIndex})!");
             }
             else
             {

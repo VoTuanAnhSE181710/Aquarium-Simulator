@@ -8,6 +8,10 @@ public class FishSwim : MonoBehaviour
     [Header("Cài đặt bể nước")]
     public Collider waterCollider; // Kéo WaterCube vào đây
 
+    [Header("Cài đặt Nhóm loài (Để phân loại trong Shop)")]
+    [Tooltip("Tên nhóm loài cá này (Ví dụ: Cá Rồng, Cá Cảnh, Cá Bảy Màu...)")]
+    public string fishGroup = "Cá Cảnh";
+
     [Header("Chế độ di chuyển")]
     public MovementType movementType = MovementType.Random;
     [Tooltip("Trục tuần tra khi dùng chế độ PingPong (LocalX là chiều dài của bể)")]
