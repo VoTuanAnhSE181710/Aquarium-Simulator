@@ -129,6 +129,9 @@ public static class CoffeeShopSceneTransition
         if (pendingSkipHours > 0f)
         {
             dayNightCycle.SkipHours(pendingSkipHours);
+
+            GameSaveManager.SaveGame(0);
+
             CaptureGameTime();
             pendingSkipHours = 0f;
         }

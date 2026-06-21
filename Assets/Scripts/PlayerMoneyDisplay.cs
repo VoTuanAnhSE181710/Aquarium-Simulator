@@ -23,6 +23,14 @@ public sealed class PlayerMoneyDisplay : MonoBehaviour
         EnsureInstance();
     }
 
+    public static void SetMoney(int exactAmount)
+    {
+        if (instance != null)
+        {
+            instance.currentMoney = exactAmount;
+        }
+    }
+
     public static void AddMoney(int amount)
     {
         EnsureInstance();

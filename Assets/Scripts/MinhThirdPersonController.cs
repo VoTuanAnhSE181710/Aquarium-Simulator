@@ -490,6 +490,9 @@ public sealed class MinhThirdPersonController : MonoBehaviour
         }
 
         dayNightCycle.SkipHours(sleepSkipHours);
+
+        GameSaveManager.SaveGame(0);
+
         return true;
     }
 
