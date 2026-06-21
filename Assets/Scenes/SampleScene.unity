@@ -11421,7 +11421,17 @@ MonoBehaviour:
   dirtyMaterial: {fileID: 2100000, guid: 6c5435c3ce9b5ac4bac2279815025bae, type: 2}
   timeToGetDirty: 600
   timeToLoseOxygen: 300
+  oxygenUsePerFish: 1
+  aeratorLevel: 1
+  maxAeratorLevel: 3
+  baseAeratorFishCapacity: 3
+  aeratorCapacityPerUpgrade: 2
+  aeratorUpgradeCost: 300
+  aeratorRenderer: {fileID: 0}
+  aeratorVisualRoot: {fileID: 0}
   bubbleEffect: {fileID: 568110854}
+  createStarterPlants: 1
+  starterPlantCount: 3
   interactionDistance: 3.5
   emptyBucketPrefab: {fileID: 7825426733051919541, guid: 349d14774aa8b7b40b76c62cfc3ded53, type: 3}
   waterBucketPrefab: {fileID: 7825426733051919541, guid: 349d14774aa8b7b40b76c62cfc3ded53, type: 3}

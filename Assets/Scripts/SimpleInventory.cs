@@ -468,96 +468,163 @@ public sealed class SimpleInventory : MonoBehaviour
         InventoryItem item = slots[selectedSlot];
 
         // ==========================================
-        // TRƯỜNG HỢP 1: TAY ĐANG TRỐNG -> CHỌN / THU HỒI / DI CHUYỂN
+        // 1. XỬ LÝ PHÍM X VÀ F CHO VẬT ĐANG ĐƯỢC CHỌN
+        // ==========================================
+        if (selectedDecorItem != null && keyboard != null)
+        {
+            // PHÍM X: THU HỒI (CHỈ CHO PHÉP KHI TAY TRỐNG)
+            if (keyboard.xKey.wasPressedThisFrame)
+            {
+                if (item != null)
+                {
+                    ShowWarning("Tay đang cầm đồ! Phải chọn ô trống trước khi thu hồi.");
+                    return;
+                }
+
+                int emptySlot = selectedSlot; // Tay đang trống nên selectedSlot chính là ô trống
+                slots[emptySlot] = selectedDecorItem.CreateInventoryItem();
+                Destroy(selectedDecorItem.gameObject);
+                DeselectDecorItem();
+                RefreshCarriedItemVisual();
+                return;
+            }
+            // PHÍM F: DI CHUYỂN (DÙ TÚI ĐẦY HAY KHÔNG)
+            else if (keyboard.fKey.wasPressedThisFrame)
+            {
+                int targetSlot = (item == null) ? selectedSlot : GetFirstEmptySlot();
+
+                if (targetSlot >= 0)
+                {
+                    // Còn chỗ trống -> Bỏ vào chỗ trống và tự động chuyển sang ô đó để cầm
+                    slots[targetSlot] = selectedDecorItem.CreateInventoryItem();
+                    Destroy(selectedDecorItem.gameObject);
+                    DeselectDecorItem();
+
+                    selectedSlot = targetSlot;
+                    RefreshCarriedItemVisual();
+                }
+                else
+                {
+                    // TÚI ĐỒ ĐÃ ĐẦY -> Hoán đổi (Swap) vật trên tay với vật dưới bể
+                    InventoryItem oldHandItem = slots[selectedSlot];
+                    slots[selectedSlot] = selectedDecorItem.CreateInventoryItem();
+
+                    // Lấy chính xác vị trí của vật cũ dưới bể
+                    Vector3 pos = selectedDecorItem.transform.position;
+                    Quaternion rot = selectedDecorItem.transform.rotation;
+
+                    // Spawn vật đang cầm trên tay xuống đúng vị trí đó
+                    GameObject placedObj = oldHandItem.DropPrefab != null
+                        ? Instantiate(oldHandItem.DropPrefab, pos, rot)
+                        : oldHandItem.SceneTemplate != null
+                            ? Instantiate(oldHandItem.SceneTemplate, pos, rot)
+                            : GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+                    placedObj.SetActive(true);
+                    placedObj.name = oldHandItem.Name;
+
+                    if (IsFishItem(oldHandItem))
+                    {
+                        FishSwim swim = placedObj.GetComponentInChildren<FishSwim>(true);
+                        if (swim != null)
+                        {
+                            Collider tankCol = AquariumDecorationMode.Instance.GetComponentInChildren<Collider>();
+                            if (tankCol != null) swim.waterCollider = tankCol;
+                        }
+                    }
+
+                    Rigidbody rb = placedObj.GetComponent<Rigidbody>();
+                    if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
+
+                    InventoryPickupItem pickup = placedObj.GetComponent<InventoryPickupItem>();
+                    if (pickup == null) pickup = placedObj.AddComponent<InventoryPickupItem>();
+                    pickup.Configure(oldHandItem.Name, oldHandItem.Color, oldHandItem.DropPrefab);
+
+                    // Hủy vật cũ đi
+                    Destroy(selectedDecorItem.gameObject);
+                    DeselectDecorItem();
+                    RefreshCarriedItemVisual();
+
+                    ShowWarning("Túi đồ đầy! Đã hoán đổi vật trên tay xuống bể.");
+                }
+                return;
+            }
+        }
+
+        if (Camera.main == null || mouse == null) return;
+
+        // ==========================================
+        // 2. BẮN TIA XUYÊN KÍNH KIỂM TRA CHUỘT
+        // ==========================================
+        Vector2 mousePos = mouse.position.ReadValue();
+        Ray ray = Camera.main.ScreenPointToRay(mousePos);
+
+        InventoryPickupItem hoveredItem = null;
+        // Dùng RaycastAll để tia sáng đâm xuyên qua lớp kính, tìm tới tận cá/đồ vật bên trong
+        RaycastHit[] hits = Physics.RaycastAll(ray, 15f);
+        foreach (RaycastHit hit in hits)
+        {
+            InventoryPickupItem clickedObj = hit.collider.GetComponentInParent<InventoryPickupItem>();
+            if (clickedObj != null)
+            {
+                Collider tankVolume = AquariumDecorationMode.Instance.GetPlacementVolume();
+                if (tankVolume != null && tankVolume.bounds.Contains(clickedObj.transform.position))
+                {
+                    hoveredItem = clickedObj;
+                    break; // Đã tìm thấy thì dừng
+                }
+            }
+        }
+
+        // Xử lý Click chuột trái
+        if (mouse.leftButton.wasPressedThisFrame)
+        {
+            if (hoveredItem != null)
+            {
+                SelectDecorItem(hoveredItem);
+                return;
+            }
+            else if (selectedDecorItem != null)
+            {
+                DeselectDecorItem();
+            }
+        }
+
+        // ==========================================
+        // 3. TAY TRỐNG -> KẾT THÚC
         // ==========================================
         if (item == null)
         {
             if (placementPreview != null) placementPreview.SetActive(false);
-
-            // 1. Click chuột trái để CHỌN vật thể trong bể
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
-            {
-                Ray ray = Camera.main.ScreenPointToRay(mouse.position.ReadValue());
-
-                // Bắn tia xuyên qua tất cả mọi thứ để tìm đồ vật
-                if (Physics.Raycast(ray, out RaycastHit hit, 15f))
-                {
-                    InventoryPickupItem clickedItem = hit.collider.GetComponentInParent<InventoryPickupItem>();
-                    if (clickedItem != null)
-                    {
-                        Collider tankVolume = AquariumDecorationMode.Instance.GetPlacementVolume();
-                        // Chỉ cho phép chọn đồ vật đang nằm TRONG bể
-                        if (tankVolume != null && tankVolume.bounds.Contains(clickedItem.transform.position))
-                        {
-                            SelectDecorItem(clickedItem);
-                            return;
-                        }
-                    }
-                }
-                // Nếu click ra chỗ trống không trúng đồ vật nào -> Bỏ chọn
-                DeselectDecorItem();
-            }
-
-            // 2. Xử lý phím X và F cho vật đang được chọn
-            if (selectedDecorItem != null && keyboard != null)
-            {
-                // PHÍM X: THU HỒI
-                if (keyboard.xKey.wasPressedThisFrame)
-                {
-                    int emptySlot = GetFirstEmptySlot();
-                    if (emptySlot >= 0)
-                    {
-                        slots[emptySlot] = selectedDecorItem.CreateInventoryItem();
-                        Destroy(selectedDecorItem.gameObject);
-                        DeselectDecorItem();
-                        RefreshCarriedItemVisual();
-                    }
-                    else
-                    {
-                        ShowWarning("Túi đồ đã đầy, không thể thu hồi!");
-                    }
-                }
-                // PHÍM F: DI CHUYỂN (Chuyển thành Hologram để đặt lại)
-                else if (keyboard.fKey.wasPressedThisFrame)
-                {
-                    // Lấy đồ nhét ngay vào ô trống đang chọn
-                    slots[selectedSlot] = selectedDecorItem.CreateInventoryItem();
-                    Destroy(selectedDecorItem.gameObject);
-                    DeselectDecorItem();
-                    RefreshCarriedItemVisual();
-                    // Ngay lập tức Hologram sẽ hiện ra vì slot[selectedSlot] giờ đã có đồ!
-                }
-            }
             return;
         }
 
         // ==========================================
-        // TRƯỜNG HỢP 2: TAY ĐANG CẦM ĐỒ -> ĐẶT ĐỒ (Logic cũ)
+        // 4. TAY ĐANG CẦM ĐỒ -> XỬ LÝ HOLOGRAM
         // ==========================================
-        DeselectDecorItem(); // Đang cầm đồ trên tay thì không được phép highlight cái khác
-
-        if (Camera.main == null || mouse == null) return;
-
         if (placementPreview == null || previewedItem != item)
         {
             RebuildPlacementPreview(item);
         }
-        placementPreview.SetActive(true);
+
+        // UX tinh tế: Nếu tay đang cầm đồ mà lại lướt chuột qua con cá -> Ẩn Hologram để dễ nhìn
+        if (hoveredItem != null)
+        {
+            placementPreview.SetActive(false);
+            return;
+        }
+        else
+        {
+            placementPreview.SetActive(true);
+        }
 
         UpdatePlacementRotation();
 
-        Vector2 mousePos = mouse.position.ReadValue();
-        Ray decorRay = Camera.main.ScreenPointToRay(mousePos);
         LayerMask mask = AquariumDecorationMode.Instance.GetPlacementMask();
-
-        bool isHit = Physics.Raycast(decorRay, out RaycastHit placeHit, 10f, mask, QueryTriggerInteraction.Ignore);
+        bool isHit = Physics.Raycast(ray, out RaycastHit placeHit, 10f, mask, QueryTriggerInteraction.Ignore);
         bool isValidPlacement = isHit && !IsWaterBucket(item.Name) && !IsEmptyBucket(item.Name);
 
-        bool isFish = false;
-        if (item.DropPrefab != null && item.DropPrefab.GetComponentInChildren<FishSwim>(true) != null) isFish = true;
-        else if (item.SceneTemplate != null && item.SceneTemplate.GetComponentInChildren<FishSwim>(true) != null) isFish = true;
-        else if (item.Name.ToLower().Contains("fish") || item.Name.ToLower().Contains("cá") || item.Name.ToLower().Contains("ca")) isFish = true;
-
+        bool isFish = IsFishItem(item);
         bool isOxygenPlant = IsAquariumOxygenPlant(item);
 
         if (isHit)
@@ -565,18 +632,14 @@ public sealed class SimpleInventory : MonoBehaviour
             placementPreview.transform.position = placeHit.point;
             Quaternion yawRotation = Quaternion.AngleAxis(placementYaw, Vector3.up);
 
-            if (isOxygenPlant)
+            if (isOxygenPlant || isFish)
             {
                 placementPreview.transform.rotation = yawRotation * item.BaseRotation;
-            }
-            else if (!isFish)
-            {
-                Quaternion alignToSurface = Quaternion.FromToRotation(Vector3.up, placeHit.normal);
-                placementPreview.transform.rotation = alignToSurface * yawRotation * item.BaseRotation;
             }
             else
             {
-                placementPreview.transform.rotation = yawRotation * item.BaseRotation;
+                Quaternion alignToSurface = Quaternion.FromToRotation(Vector3.up, placeHit.normal);
+                placementPreview.transform.rotation = alignToSurface * yawRotation * item.BaseRotation;
             }
 
             float bottomOffset = GetBottomOffset(placementPreview);
@@ -596,7 +659,7 @@ public sealed class SimpleInventory : MonoBehaviour
 
                 bool isInsideX = itemBounds.min.x >= tankBounds.min.x && itemBounds.max.x <= tankBounds.max.x;
                 bool isInsideZ = itemBounds.min.z >= tankBounds.min.z && itemBounds.max.z <= tankBounds.max.z;
-                bool isInsideY = itemBounds.min.y >= tankBounds.min.y - 0.02f && itemBounds.max.y <= tankBounds.max.y + 0.1f;
+                bool isInsideY = itemBounds.max.y <= tankBounds.max.y + 0.1f;
 
                 if (!isInsideX || !isInsideZ || !isInsideY)
                 {
@@ -1302,27 +1365,34 @@ public sealed class SimpleInventory : MonoBehaviour
 
         if (AquariumDecorationMode.IsDecorationMode)
         {
-            const float w = 620f;
+            const float w = 720f; // Nới rộng bảng một chút để chữ không bị tràn
             const float h = 36f;
             Rect decorRect = new((Screen.width - w) * 0.5f, 40f, w, h);
             GUIStyle decorStyle = new GUIStyle(slotStyle);
 
             string instructions = "";
 
-            if (slots[selectedSlot] != null)
-            {
-                decorStyle.normal.textColor = Color.cyan;
-                instructions = "DECORATION MODE: Chuột trái để đặt đồ | Ấn G để thoát";
-            }
-            else if (selectedDecorItem != null)
+            if (selectedDecorItem != null)
             {
                 decorStyle.normal.textColor = Color.yellow;
-                instructions = $"ĐÃ CHỌN: {selectedDecorItem.ItemName} | [X] Thu hồi | [F] Di chuyển | Chuột trái để hủy";
+                if (slots[selectedSlot] == null)
+                {
+                    instructions = $"ĐÃ CHỌN: {selectedDecorItem.ItemName} | [X] Thu hồi | [F] Di chuyển | Chuột trái hủy";
+                }
+                else
+                {
+                    instructions = $"ĐÃ CHỌN: {selectedDecorItem.ItemName} | [F] Di chuyển (Đổi chỗ) | Chuột trái hủy";
+                }
+            }
+            else if (slots[selectedSlot] != null)
+            {
+                decorStyle.normal.textColor = Color.cyan;
+                instructions = "DECORATION MODE: Chuột trái đặt đồ | Trỏ chuột vào đồ vật khác để Chọn | Ấn G để thoát";
             }
             else
             {
                 decorStyle.normal.textColor = Color.white;
-                instructions = "Tay đang trống. Click chuột trái vào đồ vật trong bể để chọn | Ấn G để thoát";
+                instructions = "Tay đang trống. Click chuột trái vào đồ vật trong bể để Chọn | Ấn G để thoát";
             }
 
             GUI.Box(decorRect, instructions, decorStyle);
@@ -1476,6 +1546,15 @@ public sealed class SimpleInventory : MonoBehaviour
     {
         warningMessage = msg;
         warningTimer = Time.time + 3.0f;
+    }
+
+    private static bool IsFishItem(InventoryItem item)
+    {
+        if (item == null) return false;
+        if (item.DropPrefab != null && item.DropPrefab.GetComponentInChildren<FishSwim>(true) != null) return true;
+        if (item.SceneTemplate != null && item.SceneTemplate.GetComponentInChildren<FishSwim>(true) != null) return true;
+        string lowerName = item.Name.ToLower();
+        return lowerName.Contains("fish") || lowerName.Contains("cá") || lowerName.Contains("ca");
     }
 
     public static bool IsWaterBucket(string name)

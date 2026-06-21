@@ -574,9 +574,14 @@ public sealed class FishTankWaterQuality : MonoBehaviour
         InventoryPickupItem pickup = root.AddComponent<InventoryPickupItem>();
         pickup.Configure(plantName, new Color(0.18f, 0.72f, 0.32f), null);
 
-        BoxCollider collider = root.AddComponent<BoxCollider>();
-        collider.center = new Vector3(0f, 0.18f, 0f);
-        collider.size = new Vector3(0.26f, 0.42f, 0.26f);
+        // --- THÊM ĐOẠN NÀY: Khống chế BoxCollider khổng lồ tự sinh ---
+        BoxCollider autoCol = root.GetComponent<BoxCollider>();
+        if (autoCol != null)
+        {
+            autoCol.size = new Vector3(0.01f, 0.01f, 0.01f);
+            autoCol.enabled = false;
+        }
+        // -----------------------------------------------------------
 
         provider.Configure(plantName, oxygenBonus);
         return root;
@@ -642,12 +647,6 @@ public sealed class FishTankWaterQuality : MonoBehaviour
         part.transform.localPosition = localPosition;
         part.transform.localRotation = localRotation;
         part.transform.localScale = localScale;
-
-        Collider partCollider = part.GetComponent<Collider>();
-        if (partCollider != null)
-        {
-            Destroy(partCollider);
-        }
 
         Renderer renderer = part.GetComponent<Renderer>();
         if (renderer != null)

@@ -5,6 +5,7 @@ using UnityEngine;
 public static class AquariumPlantAssetBuilder
 {
     private const string AssetFolder = "Assets/Aquarium/HomeTankPlants";
+    [MenuItem("Tools/Tạo Cây Thủy Sinh (Build Plants)")]
 
     public static void Build()
     {
@@ -139,9 +140,15 @@ public static class AquariumPlantAssetBuilder
         InventoryPickupItem pickup = root.AddComponent<InventoryPickupItem>();
         pickup.Configure(name, new Color(0.18f, 0.72f, 0.32f), null);
 
-        BoxCollider collider = root.AddComponent<BoxCollider>();
-        collider.center = new Vector3(0f, 0.18f, 0f);
-        collider.size = new Vector3(0.24f, 0.42f, 0.24f);
+        // --- THÊM ĐOẠN NÀY: Khống chế BoxCollider do InventoryPickupItem tự sinh ra ---
+        BoxCollider autoCol = root.GetComponent<BoxCollider>();
+        if (autoCol != null)
+        {
+            autoCol.size = new Vector3(0.01f, 0.01f, 0.01f); // Thu nhỏ bé tí hon
+            autoCol.enabled = false; // Tắt luôn để không cản đường tia chuột
+        }
+        // -----------------------------------------------------------------------------
+
         return root;
     }
 
@@ -157,7 +164,9 @@ public static class AquariumPlantAssetBuilder
         GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
         part.name = name;
         part.transform.SetParent(parent, false);
-        Object.DestroyImmediate(part.GetComponent<Collider>());
+
+        // ĐÃ GIỮ LẠI COLLIDER CHO TỪNG CÀNH/LÁ BẰNG CÁCH XÓA DÒNG Object.DestroyImmediate
+
         Renderer renderer = part.GetComponent<Renderer>();
         renderer.sharedMaterial = material;
         return part;
