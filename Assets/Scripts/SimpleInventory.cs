@@ -556,12 +556,18 @@ public sealed class SimpleInventory : MonoBehaviour
         else if (item.SceneTemplate != null && item.SceneTemplate.GetComponentInChildren<FishSwim>(true) != null) isFish = true;
         else if (item.Name.ToLower().Contains("fish") || item.Name.ToLower().Contains("cá") || item.Name.ToLower().Contains("ca")) isFish = true;
 
+        bool isOxygenPlant = IsAquariumOxygenPlant(item);
+
         if (isHit)
         {
             placementPreview.transform.position = placeHit.point;
             Quaternion yawRotation = Quaternion.AngleAxis(placementYaw, Vector3.up);
 
-            if (!isFish)
+            if (isOxygenPlant)
+            {
+                placementPreview.transform.rotation = yawRotation * item.BaseRotation;
+            }
+            else if (!isFish)
             {
                 Quaternion alignToSurface = Quaternion.FromToRotation(Vector3.up, placeHit.normal);
                 placementPreview.transform.rotation = alignToSurface * yawRotation * item.BaseRotation;
@@ -575,6 +581,11 @@ public sealed class SimpleInventory : MonoBehaviour
             placementPreview.transform.position = placeHit.point + placeHit.normal * bottomOffset;
 
             Collider tankVolume = AquariumDecorationMode.Instance.GetPlacementVolume();
+            if (tankVolume != null && isOxygenPlant)
+            {
+                SnapPlantToTankBottom(placementPreview, tankVolume);
+            }
+
             if (tankVolume != null && isValidPlacement)
             {
                 Bounds itemBounds = GetTotalBounds(placementPreview);
@@ -583,7 +594,7 @@ public sealed class SimpleInventory : MonoBehaviour
 
                 bool isInsideX = itemBounds.min.x >= tankBounds.min.x && itemBounds.max.x <= tankBounds.max.x;
                 bool isInsideZ = itemBounds.min.z >= tankBounds.min.z && itemBounds.max.z <= tankBounds.max.z;
-                bool isInsideY = itemBounds.max.y <= tankBounds.max.y + 0.1f;
+                bool isInsideY = itemBounds.min.y >= tankBounds.min.y - 0.02f && itemBounds.max.y <= tankBounds.max.y + 0.1f;
 
                 if (!isInsideX || !isInsideZ || !isInsideY)
                 {
@@ -633,6 +644,15 @@ public sealed class SimpleInventory : MonoBehaviour
         placedObj.SetActive(true);
         placedObj.name = item.Name;
 
+        if (IsAquariumOxygenPlant(item) && AquariumDecorationMode.Instance != null)
+        {
+            Collider tankVolume = AquariumDecorationMode.Instance.GetPlacementVolume();
+            if (tankVolume != null)
+            {
+                SnapPlantToTankBottom(placedObj, tankVolume);
+            }
+        }
+
         if (isFish)
         {
             FishSwim swim = placedObj.GetComponentInChildren<FishSwim>(true);
@@ -668,6 +688,65 @@ public sealed class SimpleInventory : MonoBehaviour
 
         // Ẩn Hologram đi vì ô chứa đồ đã trống
         if (placementPreview != null) placementPreview.SetActive(false);
+    }
+
+    private static bool IsAquariumOxygenPlant(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return false;
+        }
+
+        if (item.DropPrefab != null && item.DropPrefab.GetComponentInChildren<AquariumOxygenProvider>(true) != null)
+        {
+            return true;
+        }
+
+        if (item.SceneTemplate != null && item.SceneTemplate.GetComponentInChildren<AquariumOxygenProvider>(true) != null)
+        {
+            return true;
+        }
+
+        string lowerName = item.Name.ToLower();
+        return lowerName.Contains("aquaticplant") || lowerName.Contains("oxygen plant") || lowerName.Contains("cay thuy sinh");
+    }
+
+    private void SnapPlantToTankBottom(GameObject plantObject, Collider tankVolume)
+    {
+        if (plantObject == null || tankVolume == null)
+        {
+            return;
+        }
+
+        Bounds tankBounds = tankVolume.bounds;
+        Bounds itemBounds = GetTotalBounds(plantObject);
+        Vector3 position = plantObject.transform.position;
+
+        position.y += tankBounds.min.y - itemBounds.min.y + 0.01f;
+        plantObject.transform.position = position;
+
+        itemBounds = GetTotalBounds(plantObject);
+        position = plantObject.transform.position;
+
+        if (itemBounds.min.x < tankBounds.min.x)
+        {
+            position.x += tankBounds.min.x - itemBounds.min.x + 0.01f;
+        }
+        else if (itemBounds.max.x > tankBounds.max.x)
+        {
+            position.x -= itemBounds.max.x - tankBounds.max.x + 0.01f;
+        }
+
+        if (itemBounds.min.z < tankBounds.min.z)
+        {
+            position.z += tankBounds.min.z - itemBounds.min.z + 0.01f;
+        }
+        else if (itemBounds.max.z > tankBounds.max.z)
+        {
+            position.z -= itemBounds.max.z - tankBounds.max.z + 0.01f;
+        }
+
+        plantObject.transform.position = position;
     }
 
     private void SetPreviewColor(Color c, float alpha)
@@ -1412,4 +1491,3 @@ public sealed class SimpleInventory : MonoBehaviour
         return isBucket && !IsWaterBucket(name);
     }
 }
-
