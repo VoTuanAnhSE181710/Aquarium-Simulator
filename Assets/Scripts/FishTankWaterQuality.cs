@@ -14,8 +14,22 @@ public sealed class FishTankWaterQuality : MonoBehaviour
     [SerializeField] private float timeToGetDirty = 180f; // 3 minutes to get fully dirty
     [SerializeField] private float timeToLoseOxygen = 120f; // 2 minutes to lose all oxygen if aerator is off
 
+    [Header("Oxygen Capacity")]
+    [SerializeField] private float oxygenUsePerFish = 1f;
+    [SerializeField] private int aeratorLevel = 1;
+    [SerializeField] private int maxAeratorLevel = 3;
+    [SerializeField] private float baseAeratorFishCapacity = 3f;
+    [SerializeField] private float aeratorCapacityPerUpgrade = 2f;
+    [SerializeField] private int aeratorUpgradeCost = 300;
+    [SerializeField] private Renderer aeratorRenderer;
+    [SerializeField] private Transform aeratorVisualRoot;
+
     [Header("Aerator Bubble Effect")]
     [SerializeField] private ParticleSystem bubbleEffect;
+
+    [Header("Starter Oxygen Plants")]
+    [SerializeField] private bool createStarterPlants = true;
+    [SerializeField] private int starterPlantCount = 3;
 
     [Header("Interaction Settings")]
     [SerializeField] private float interactionDistance = 3.5f;
@@ -29,6 +43,11 @@ public sealed class FishTankWaterQuality : MonoBehaviour
     public float Oxygen { get; private set; } = 1.0f;
     public float Chlorine { get; private set; } = 0.0f;
     public bool IsAeratorOn { get; private set; } = true;
+    public int FishCount { get; private set; }
+    public float FishOxygenLoad { get; private set; }
+    public float AeratorOxygenCapacity { get; private set; }
+    public float PlantOxygenCapacity { get; private set; }
+    public float TotalOxygenCapacity => AeratorOxygenCapacity + PlantOxygenCapacity;
 
     private Transform player;
     private SimpleInventory playerInventory;
@@ -36,6 +55,7 @@ public sealed class FishTankWaterQuality : MonoBehaviour
     private GUIStyle labelStyle;
     private GUIStyle boxStyle;
     private GUIStyle warningStyle;
+    private Vector3 aeratorBaseScale = Vector3.one;
 
     private void Start()
     {
@@ -62,6 +82,8 @@ public sealed class FishTankWaterQuality : MonoBehaviour
         }
 
         // 2. Auto-detect LocNuoc filter to attach bubble particle system
+        AutoFindAeratorVisual();
+
         if (bubbleEffect == null)
         {
             bubbleEffect = GetComponentInChildren<ParticleSystem>();
@@ -97,6 +119,12 @@ public sealed class FishTankWaterQuality : MonoBehaviour
             }
         }
 
+        aeratorLevel = Mathf.Clamp(aeratorLevel, 1, maxAeratorLevel);
+        if (aeratorVisualRoot != null)
+        {
+            aeratorBaseScale = aeratorVisualRoot.localScale;
+        }
+        EnsureStarterOxygenPlants();
         UpdateAeratorVisuals();
     }
 
@@ -193,14 +221,22 @@ public sealed class FishTankWaterQuality : MonoBehaviour
         // Cleanliness decays over time
         Cleanliness = Mathf.Max(0f, Cleanliness - (Time.deltaTime / timeToGetDirty));
 
-        // Oxygen decays or recovers depending on aerator state
-        if (IsAeratorOn)
+        UpdateOxygenCapacity();
+
+        // Oxygen depends on living fish load, aerator level, and aquarium plants.
+        if (IsAeratorOn && TotalOxygenCapacity >= FishOxygenLoad)
         {
-            Oxygen = Mathf.Min(1f, Oxygen + (Time.deltaTime / 5f)); // Recovers fast when ON
+            float surplusCapacity = TotalOxygenCapacity - FishOxygenLoad;
+            float recoverySpeed = 0.08f + surplusCapacity * 0.015f;
+            Oxygen = Mathf.Min(1f, Oxygen + Time.deltaTime * recoverySpeed);
         }
         else
         {
-            Oxygen = Mathf.Max(0f, Oxygen - (Time.deltaTime / timeToLoseOxygen)); // Decays when OFF
+            float shortage = IsAeratorOn
+                ? Mathf.Max(0.25f, FishOxygenLoad - TotalOxygenCapacity)
+                : Mathf.Max(0.5f, FishOxygenLoad);
+            float lossPerSecond = (1f / Mathf.Max(1f, timeToLoseOxygen)) * shortage;
+            Oxygen = Mathf.Max(0f, Oxygen - Time.deltaTime * lossPerSecond);
         }
 
         // Chlorine evaporates gradually (2% per second)
@@ -238,6 +274,11 @@ public sealed class FishTankWaterQuality : MonoBehaviour
                 {
                     IsAeratorOn = !IsAeratorOn;
                     UpdateAeratorVisuals();
+                }
+
+                if (keyboard.uKey.wasPressedThisFrame)
+                {
+                    TryUpgradeAerator();
                 }
 
                 // Key R: Dechlorinate (costs 50 VND)
@@ -354,6 +395,315 @@ public sealed class FishTankWaterQuality : MonoBehaviour
                 if (bubbleEffect.isPlaying) bubbleEffect.Stop();
             }
         }
+
+        if (aeratorVisualRoot != null)
+        {
+            float scaleBonus = 1f + ((aeratorLevel - 1) * 0.12f);
+            aeratorVisualRoot.localScale = aeratorBaseScale * scaleBonus;
+        }
+
+        if (aeratorRenderer != null)
+        {
+            Color levelColor = aeratorLevel switch
+            {
+                1 => new Color(0.15f, 0.65f, 1f),
+                2 => new Color(0.25f, 1f, 0.55f),
+                _ => new Color(1f, 0.75f, 0.25f)
+            };
+
+            if (aeratorRenderer.material.HasProperty("_BaseColor"))
+            {
+                aeratorRenderer.material.SetColor("_BaseColor", levelColor);
+            }
+            else
+            {
+                aeratorRenderer.material.color = levelColor;
+            }
+        }
+    }
+
+    private void UpdateOxygenCapacity()
+    {
+        FishCount = 0;
+        FishOxygenLoad = 0f;
+        PlantOxygenCapacity = 0f;
+        AeratorOxygenCapacity = IsAeratorOn
+            ? baseAeratorFishCapacity + Mathf.Max(0, aeratorLevel - 1) * aeratorCapacityPerUpgrade
+            : 0f;
+
+        if (waterCollider != null)
+        {
+            Bounds waterBounds = waterCollider.bounds;
+            foreach (FishSwim fish in FindObjectsByType<FishSwim>(FindObjectsSortMode.None))
+            {
+                if (fish == null || fish.isDead)
+                {
+                    continue;
+                }
+
+                bool usesThisWater = fish.waterCollider == waterCollider;
+                if (!usesThisWater && waterBounds.Contains(fish.transform.position))
+                {
+                    usesThisWater = true;
+                }
+
+                if (!usesThisWater)
+                {
+                    continue;
+                }
+
+                FishCount++;
+                FishOxygenLoad += Mathf.Max(0f, oxygenUsePerFish);
+            }
+
+            foreach (AquariumOxygenProvider provider in FindObjectsByType<AquariumOxygenProvider>(FindObjectsSortMode.None))
+            {
+                if (provider != null && IsProviderInWater(provider, waterBounds))
+                {
+                    PlantOxygenCapacity += provider.OxygenCapacityBonus;
+                }
+            }
+        }
+    }
+
+    private bool IsProviderInWater(AquariumOxygenProvider provider, Bounds waterBounds)
+    {
+        if (waterBounds.Contains(provider.transform.position))
+        {
+            return true;
+        }
+
+        foreach (Renderer renderer in provider.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer != null && waterBounds.Intersects(renderer.bounds))
+            {
+                return true;
+            }
+        }
+
+        foreach (Collider collider in provider.GetComponentsInChildren<Collider>(true))
+        {
+            if (collider != null && waterBounds.Intersects(collider.bounds))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void EnsureStarterOxygenPlants()
+    {
+        if (!createStarterPlants || starterPlantCount <= 0 || waterCollider == null)
+        {
+            return;
+        }
+
+        Bounds waterBounds = waterCollider.bounds;
+        int existingPlants = 0;
+        foreach (AquariumOxygenProvider provider in FindObjectsByType<AquariumOxygenProvider>(FindObjectsSortMode.None))
+        {
+            if (provider != null && IsProviderInWater(provider, waterBounds))
+            {
+                existingPlants++;
+            }
+        }
+
+        if (existingPlants > 0)
+        {
+            return;
+        }
+
+        Material darkGreen = CreateRuntimePlantMaterial(new Color(0.08f, 0.45f, 0.18f));
+        Material lightGreen = CreateRuntimePlantMaterial(new Color(0.18f, 0.72f, 0.32f));
+        Material redGreen = CreateRuntimePlantMaterial(new Color(0.44f, 0.18f, 0.22f));
+        Material stemMaterial = CreateRuntimePlantMaterial(new Color(0.07f, 0.28f, 0.12f));
+        Material stoneMaterial = CreateRuntimePlantMaterial(new Color(0.38f, 0.34f, 0.30f));
+
+        int count = Mathf.Clamp(starterPlantCount, 1, 3);
+        for (int i = 0; i < count; i++)
+        {
+            float xOffset = count == 1 ? 0f : Mathf.Lerp(-0.28f, 0.28f, i / Mathf.Max(1f, count - 1f));
+            Vector3 position = new(
+                waterBounds.center.x + xOffset,
+                waterBounds.min.y + 0.02f,
+                waterBounds.center.z - 0.12f + i * 0.08f);
+
+            if (i == 0)
+            {
+                CreateGrassCluster(position, lightGreen, stemMaterial, stoneMaterial);
+            }
+            else if (i == 1)
+            {
+                CreateBroadLeafPlant(position, darkGreen, stemMaterial, stoneMaterial);
+            }
+            else
+            {
+                CreateRedStemPlant(position, redGreen, stemMaterial, stoneMaterial);
+            }
+        }
+    }
+
+    private Material CreateRuntimePlantMaterial(Color color)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
+        {
+            shader = Shader.Find("Standard");
+        }
+
+        Material material = new(shader);
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", color);
+        }
+        else
+        {
+            material.color = color;
+        }
+        return material;
+    }
+
+    private GameObject CreatePlantRoot(string plantName, Vector3 position, float oxygenBonus)
+    {
+        GameObject root = new(plantName);
+        root.transform.SetParent(transform, true);
+        root.transform.position = position;
+
+        AquariumOxygenProvider provider = root.AddComponent<AquariumOxygenProvider>();
+        InventoryPickupItem pickup = root.AddComponent<InventoryPickupItem>();
+        pickup.Configure(plantName, new Color(0.18f, 0.72f, 0.32f), null);
+
+        BoxCollider collider = root.AddComponent<BoxCollider>();
+        collider.center = new Vector3(0f, 0.18f, 0f);
+        collider.size = new Vector3(0.26f, 0.42f, 0.26f);
+
+        provider.Configure(plantName, oxygenBonus);
+        return root;
+    }
+
+    private void CreateGrassCluster(Vector3 position, Material leaf, Material stem, Material stone)
+    {
+        GameObject root = CreatePlantRoot("AquaticPlant_GrassCluster", position, 1.5f);
+        CreatePlantPart("StoneBase", root.transform, stone, new Vector3(0f, 0.018f, 0f), Quaternion.identity, new Vector3(0.18f, 0.035f, 0.13f));
+
+        for (int i = 0; i < 12; i++)
+        {
+            float angle = i * 30f;
+            float height = 0.34f + (i % 4) * 0.055f;
+            Vector3 localPos = Quaternion.Euler(0f, angle, 0f) * new Vector3(0.035f + (i % 3) * 0.01f, height * 0.5f, 0f);
+            CreatePlantPart("Blade", root.transform, leaf, localPos, Quaternion.Euler(14f + (i % 5) * 4f, angle, 8f), new Vector3(0.018f, height, 0.01f));
+        }
+    }
+
+    private void CreateBroadLeafPlant(Vector3 position, Material leaf, Material stem, Material stone)
+    {
+        GameObject root = CreatePlantRoot("AquaticPlant_BroadLeaf", position, 2f);
+        CreatePlantPart("StoneBase", root.transform, stone, new Vector3(0f, 0.018f, 0f), Quaternion.identity, new Vector3(0.18f, 0.035f, 0.13f));
+
+        for (int i = 0; i < 7; i++)
+        {
+            float angle = i * 51.4f;
+            float height = 0.22f + (i % 3) * 0.045f;
+            CreatePlantPart("Stem", root.transform, stem, Quaternion.Euler(0f, angle, 0f) * new Vector3(0.025f, height * 0.5f, 0f), Quaternion.Euler(0f, angle, 6f), new Vector3(0.012f, height, 0.012f));
+            CreatePlantPart("Leaf", root.transform, leaf, Quaternion.Euler(0f, angle, 0f) * new Vector3(0.055f, height + 0.045f, 0f), Quaternion.Euler(20f, angle, 28f), new Vector3(0.07f, 0.018f, 0.035f));
+        }
+    }
+
+    private void CreateRedStemPlant(Vector3 position, Material leaf, Material stem, Material stone)
+    {
+        GameObject root = CreatePlantRoot("AquaticPlant_RedStem", position, 2.5f);
+        CreatePlantPart("StoneBase", root.transform, stone, new Vector3(0f, 0.018f, 0f), Quaternion.identity, new Vector3(0.18f, 0.035f, 0.13f));
+
+        for (int i = 0; i < 5; i++)
+        {
+            float angle = i * 72f;
+            float height = 0.38f + (i % 2) * 0.08f;
+            CreatePlantPart("TallStem", root.transform, stem, Quaternion.Euler(0f, angle, 0f) * new Vector3(0.035f, height * 0.5f, 0f), Quaternion.Euler(4f, angle, 4f), new Vector3(0.013f, height, 0.013f));
+
+            for (int leafIndex = 0; leafIndex < 3; leafIndex++)
+            {
+                CreatePlantPart(
+                    "RedLeaf",
+                    root.transform,
+                    leaf,
+                    Quaternion.Euler(0f, angle + leafIndex * 28f, 0f) * new Vector3(0.055f, height * (0.45f + leafIndex * 0.18f), 0f),
+                    Quaternion.Euler(18f, angle + leafIndex * 28f, leafIndex % 2 == 0 ? 28f : -28f),
+                    new Vector3(0.055f, 0.016f, 0.026f));
+            }
+        }
+    }
+
+    private void CreatePlantPart(string partName, Transform parent, Material material, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
+    {
+        GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        part.name = partName;
+        part.transform.SetParent(parent, false);
+        part.transform.localPosition = localPosition;
+        part.transform.localRotation = localRotation;
+        part.transform.localScale = localScale;
+
+        Collider partCollider = part.GetComponent<Collider>();
+        if (partCollider != null)
+        {
+            Destroy(partCollider);
+        }
+
+        Renderer renderer = part.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.sharedMaterial = material;
+        }
+    }
+
+    private void TryUpgradeAerator()
+    {
+        if (aeratorLevel >= maxAeratorLevel)
+        {
+            Debug.Log("Aerator is already at max level.");
+            return;
+        }
+
+        int upgradeCost = aeratorUpgradeCost * aeratorLevel;
+        if (!PlayerMoneyDisplay.TrySpendMoney(upgradeCost))
+        {
+            Debug.Log($"Not enough money to upgrade aerator. Need {upgradeCost} VND.");
+            return;
+        }
+
+        aeratorLevel++;
+        UpdateAeratorVisuals();
+        Debug.Log($"Aerator upgraded to level {aeratorLevel}.");
+    }
+
+    private void AutoFindAeratorVisual()
+    {
+        if (aeratorVisualRoot == null || aeratorRenderer == null)
+        {
+            foreach (Transform child in GetComponentsInChildren<Transform>(true))
+            {
+                string name = child.gameObject.name.ToLower();
+                if (!name.Contains("loc") && !name.Contains("filter") && !name.Contains("aerator") && !name.Contains("oxi"))
+                {
+                    continue;
+                }
+
+                if (aeratorVisualRoot == null)
+                {
+                    aeratorVisualRoot = child;
+                }
+
+                if (aeratorRenderer == null)
+                {
+                    aeratorRenderer = child.GetComponentInChildren<Renderer>();
+                }
+
+                if (aeratorVisualRoot != null && aeratorRenderer != null)
+                {
+                    break;
+                }
+            }
+        }
     }
 
     private void OnGUI()
@@ -364,7 +714,7 @@ public sealed class FishTankWaterQuality : MonoBehaviour
 
         // 1. Draw fish tank stats box at the bottom
         float width = 360f;
-        float height = 110f;
+        float height = 150f;
         Rect rect = new((Screen.width - width) * 0.5f, Screen.height - 280f, width, height);
         
         string cleanPercent = Mathf.RoundToInt(Cleanliness * 100f) + "%";
@@ -374,8 +724,10 @@ public sealed class FishTankWaterQuality : MonoBehaviour
 
         string content = $"<b>[ HOME FISH TANK ]</b>\n" +
                          $"- Water Cleanliness: {cleanPercent}\n" +
-                         $"- Dissolved Oxygen: {oxyPercent} (Aerator: {sActive} - Key [T])\n" +
-                         $"- Chlorine Level: {clorPercent} (Dechlorinate: Key [R] - 50 VND)";
+                         $"- Dissolved Oxygen: {oxyPercent} (Aerator L{aeratorLevel}: {sActive} - Key [T])\n" +
+                         $"- Fish/Oxygen: {FishCount} fish | Load {FishOxygenLoad:0.#}/{TotalOxygenCapacity:0.#} (Plants +{PlantOxygenCapacity:0.#})\n" +
+                         $"- Chlorine Level: {clorPercent} (Dechlorinate: Key [R] - 50 VND)\n" +
+                         $"- Upgrade aerator: Key [U] - {GetNextAeratorCostText()}";
 
         GUI.Box(rect, content, boxStyle);
 
@@ -402,6 +754,11 @@ public sealed class FishTankWaterQuality : MonoBehaviour
                 GUI.Box(warningRect, "Dirty water! Get a clean water bucket from NVS to refill!", warningStyle);
             }
         }
+    }
+
+    private string GetNextAeratorCostText()
+    {
+        return aeratorLevel >= maxAeratorLevel ? "MAX" : $"{aeratorUpgradeCost * aeratorLevel} VND";
     }
 
     private InventoryPickupItem FindNearestDroppedWaterBucket(Vector3 center, float maxDistance)
