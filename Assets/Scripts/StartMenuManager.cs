@@ -8,38 +8,44 @@ public class StartMenuManager : MonoBehaviour
     public string sceneToLoad = "SampleScene";
 
     [Header("Giao diện UI")]
-    public GameObject mainMenuUI;     // Kéo Panel chứa nút Play, Settings, Quit vào đây
-    public GameObject settingsMenuUI; // Kéo Panel Settings (chứa các cài đặt) vào đây
+    public GameObject mainMenuUI;
+    public GameObject settingsMenuUI;
 
     void Start()
     {
-        // Đảm bảo khi vừa mở game lên, Menu chính hiện ra và Menu cài đặt ẩn đi
         mainMenuUI.SetActive(true);
         settingsMenuUI.SetActive(false);
     }
 
-    // Hàm này sẽ được gọi khi bấm nút Play
     public void PlayGame()
     {
         Debug.Log("Nút Play đã nhận tín hiệu click!");
-        SceneManager.LoadScene(sceneToLoad);
+
+        // --- THAY ĐỔI Ở ĐÂY ---
+        // Ra lệnh cho LoadingManager bắt đầu quá trình mờ ảo và load scene
+        if (LoadingManager.Instance != null)
+        {
+            LoadingManager.Instance.LoadScene(sceneToLoad);
+        }
+        else
+        {
+            // Dự phòng: Nếu bạn quên tạo LoadingManager, game vẫn load thẳng được
+            SceneManager.LoadScene(sceneToLoad);
+        }
     }
 
-    // Hàm này gọi khi bấm nút Cài đặt (Settings) ở Menu chính
     public void OpenSettings()
     {
-        mainMenuUI.SetActive(false);     // Ẩn menu chính
-        settingsMenuUI.SetActive(true);  // Hiện menu cài đặt
+        mainMenuUI.SetActive(false);
+        settingsMenuUI.SetActive(true);
     }
 
-    // Hàm này gọi khi bấm nút Quay lại (Back) ở trong Menu cài đặt
     public void CloseSettings()
     {
-        settingsMenuUI.SetActive(false); // Ẩn menu cài đặt
-        mainMenuUI.SetActive(true);      // Hiện lại menu chính
+        settingsMenuUI.SetActive(false);
+        mainMenuUI.SetActive(true);
     }
 
-    // Hàm này sẽ được gọi khi bấm nút Quit
     public void QuitGame()
     {
         Debug.Log("Đã thoát Game!");

@@ -61,6 +61,8 @@ public sealed class SimpleInventory : MonoBehaviour
 
     private void Update()
     {
+        if (LoadingManager.IsLoading) return;
+
         if (PauseMenuManager.GameIsPaused)
         {
             return;
@@ -1193,6 +1195,8 @@ public sealed class SimpleInventory : MonoBehaviour
 
     private void OnGUI()
     {
+        if (LoadingManager.IsLoading) return;
+
         if (PauseMenuManager.GameIsPaused)
         {
             return;

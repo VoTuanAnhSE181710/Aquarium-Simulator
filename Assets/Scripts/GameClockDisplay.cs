@@ -42,8 +42,9 @@ public sealed class GameClockDisplay : MonoBehaviour
 
     private void OnGUI()
     {
-        // (Tùy chọn) Thêm dòng check PauseMenuManager ở đây nếu bạn muốn đồng hồ cũng tàng hình khi bấm Tạm Dừng game
-        // if (PauseMenuManager.GameIsPaused) return;
+        if (LoadingManager.IsLoading) return;
+
+        if (PauseMenuManager.GameIsPaused) return;
 
         EnsureStyle();
 

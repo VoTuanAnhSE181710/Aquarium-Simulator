@@ -224,6 +224,8 @@ public sealed class BusSchoolAttendanceController : MonoBehaviour
 
     private void OnGUI()
     {
+        if (LoadingManager.IsLoading) return;
+
         if (PauseMenuManager.GameIsPaused)
         {
             return;

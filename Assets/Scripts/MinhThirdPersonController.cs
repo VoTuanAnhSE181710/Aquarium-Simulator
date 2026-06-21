@@ -114,9 +114,34 @@ public sealed class MinhThirdPersonController : MonoBehaviour
 
     private void Update()
     {
+        if (LoadingManager.IsLoading)
+        {
+            // 1. Ép buộc Animator chuyển về trạng thái đứng im (Idle) ngay lập tức
+            SetWalking(false);
+
+            // 2. Vẫn cho phép Trọng lực hoạt động để nhân vật tự động rớt xuống đất 
+            // trong lúc màn hình xanh đang che giấu.
+            if (characterController.isGrounded)
+            {
+                verticalVelocity = -2f;
+            }
+            else
+            {
+                verticalVelocity += gravity * Time.deltaTime;
+            }
+            characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
+
+            // 3. Cập nhật ngầm trạng thái chạm đất để KHÔNG phát ra tiếng động "oạch" khi vào game
+            wasGrounded = characterController.isGrounded;
+            previousVerticalVelocity = verticalVelocity;
+
+            return; // Dừng tại đây, không cho đọc bàn phím hay di chuyển
+        }
+
         if (AquariumDecorationMode.IsDecorationMode) return;
 
         Keyboard keyboard = Keyboard.current;
+
         if (keyboard == null || cameraTransform == null)
         {
             return;

@@ -96,10 +96,11 @@ public sealed class PlayerMoneyDisplay : MonoBehaviour
 
     private void OnGUI()
     {
-        if (PauseMenuManager.GameIsPaused)
-        {
-            return;
-        }
+        if (SceneManager.GetActiveScene().name == "StartMenuScene") return;
+
+        if (LoadingManager.IsLoading) return;
+
+        if (PauseMenuManager.GameIsPaused) return;
 
         EnsureStyle();
         Rect rect = new(screenOffset.x, screenOffset.y, displaySize.x, displaySize.y);

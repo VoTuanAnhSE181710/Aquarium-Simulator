@@ -11442,6 +11442,7 @@ MonoBehaviour:
   placementLayerMask:
     serializedVersion: 2
     m_Bits: 8
+  transitionDuration: 0.6
   objectsToHide:
   - {fileID: 410035958}
   - {fileID: 2082361942}
@@ -43570,7 +43571,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ea56766034f354643b25dad1a282644b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.81
+      value: 0.531
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ea56766034f354643b25dad1a282644b, type: 3}
       propertyPath: m_LocalPosition.z
