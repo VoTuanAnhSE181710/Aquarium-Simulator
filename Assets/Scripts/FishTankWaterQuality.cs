@@ -182,7 +182,7 @@ public sealed class FishTankWaterQuality : MonoBehaviour
 
     private void Update()
     {
-        if (PauseMenuManager.GameIsPaused) return;
+        if (PauseMenuManager.GameIsPaused || AquariumDecorationMode.IsDecorationMode) return;
 
         if (player == null || playerInventory == null)
         {
@@ -358,7 +358,7 @@ public sealed class FishTankWaterQuality : MonoBehaviour
 
     private void OnGUI()
     {
-        if (PauseMenuManager.GameIsPaused || !isPlayerNear || playerInventory == null) return;
+        if (PauseMenuManager.GameIsPaused || !isPlayerNear || playerInventory == null || AquariumDecorationMode.IsDecorationMode) return;
 
         EnsureStyles();
 

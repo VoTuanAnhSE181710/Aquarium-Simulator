@@ -114,6 +114,8 @@ public sealed class MinhThirdPersonController : MonoBehaviour
 
     private void Update()
     {
+        if (AquariumDecorationMode.IsDecorationMode) return;
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null || cameraTransform == null)
         {
@@ -195,6 +197,8 @@ public sealed class MinhThirdPersonController : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (AquariumDecorationMode.IsDecorationMode) return;
+
         ApplyFirstPersonCamera();
     }
 
@@ -237,10 +241,9 @@ public sealed class MinhThirdPersonController : MonoBehaviour
 
     private void UpdateFirstPersonLook()
     {
-        if (!useFirstPersonCamera)
-        {
-            return;
-        }
+        if (!useFirstPersonCamera) return;
+
+        if (AquariumDecorationMode.IsDecorationMode) return;
 
         Mouse mouse = Mouse.current;
         if (mouse != null && !PauseMenuManager.GameIsPaused)
@@ -584,7 +587,7 @@ public sealed class MinhThirdPersonController : MonoBehaviour
 
     private void OnGUI()
     {
-        if (PauseMenuManager.GameIsPaused)
+        if (PauseMenuManager.GameIsPaused || AquariumDecorationMode.IsDecorationMode)
         {
             return;
         }

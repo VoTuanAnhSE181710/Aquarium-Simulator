@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 public sealed class SimpleInventory : MonoBehaviour
 {
@@ -31,7 +32,6 @@ public sealed class SimpleInventory : MonoBehaviour
 
     [SerializeField] private float pickupDistance = 2.2f;
     [SerializeField] private float dropDistance = 1.35f;
-    [SerializeField] private float dropHeight = 0.35f;
     [SerializeField] private float placementRotationStep = 15f;
     [SerializeField] private Vector3 heldItemLocalPosition = new(0.08f, 0.02f, 0.04f);
     [SerializeField] private Vector3 heldItemLocalEulerAngles = new(0f, 0f, 0f);
@@ -55,6 +55,8 @@ public sealed class SimpleInventory : MonoBehaviour
     private string warningMessage = "";
     private float warningTimer = 0f;
     private bool showDebugHUD = true;
+    private InventoryPickupItem selectedDecorItem;
+    private Dictionary<Renderer, Color> originalDecorColors = new Dictionary<Renderer, Color>();
 
 
     private void Update()
@@ -100,7 +102,34 @@ public sealed class SimpleInventory : MonoBehaviour
 
         if (keyboard.gKey.wasPressedThisFrame)
         {
-            TryDropSelected();
+            if (AquariumDecorationMode.IsDecorationMode)
+            {
+                // Đang ở trong chế độ Decor -> Bấm G để THOÁT
+                if (AquariumDecorationMode.Instance != null)
+                {
+                    AquariumDecorationMode.Instance.ExitDecorationMode();
+                    DeselectDecorItem();
+                }
+            }
+            else
+            {
+                // Đang ở ngoài -> Kiểm tra xem có đủ gần bể để VÀO không
+                if (AquariumDecorationMode.Instance != null && AquariumDecorationMode.Instance.CanEnterMode())
+                {
+                    AquariumDecorationMode.Instance.EnterDecorationMode();
+                }
+                else
+                {
+                    // Nếu đứng xa bể cá -> Thực hiện thả đồ (Drop) như bình thường
+                    TryDropSelected();
+                }
+            }
+        }
+
+        if (AquariumDecorationMode.IsDecorationMode)
+        {
+            HandleDecorationMode();
+            return;
         }
 
         UpdatePlacementRotation();
@@ -425,6 +454,275 @@ public sealed class SimpleInventory : MonoBehaviour
         return pickup != null;
     }
 
+    private void HandleDecorationMode()
+    {
+        Keyboard keyboard = Keyboard.current;
+        Mouse mouse = Mouse.current;
+        InventoryItem item = slots[selectedSlot];
+
+        // ==========================================
+        // TRƯỜNG HỢP 1: TAY ĐANG TRỐNG -> CHỌN / THU HỒI / DI CHUYỂN
+        // ==========================================
+        if (item == null)
+        {
+            if (placementPreview != null) placementPreview.SetActive(false);
+
+            // 1. Click chuột trái để CHỌN vật thể trong bể
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            {
+                Ray ray = Camera.main.ScreenPointToRay(mouse.position.ReadValue());
+
+                // Bắn tia xuyên qua tất cả mọi thứ để tìm đồ vật
+                if (Physics.Raycast(ray, out RaycastHit hit, 15f))
+                {
+                    InventoryPickupItem clickedItem = hit.collider.GetComponentInParent<InventoryPickupItem>();
+                    if (clickedItem != null)
+                    {
+                        Collider tankVolume = AquariumDecorationMode.Instance.GetPlacementVolume();
+                        // Chỉ cho phép chọn đồ vật đang nằm TRONG bể
+                        if (tankVolume != null && tankVolume.bounds.Contains(clickedItem.transform.position))
+                        {
+                            SelectDecorItem(clickedItem);
+                            return;
+                        }
+                    }
+                }
+                // Nếu click ra chỗ trống không trúng đồ vật nào -> Bỏ chọn
+                DeselectDecorItem();
+            }
+
+            // 2. Xử lý phím X và F cho vật đang được chọn
+            if (selectedDecorItem != null && keyboard != null)
+            {
+                // PHÍM X: THU HỒI
+                if (keyboard.xKey.wasPressedThisFrame)
+                {
+                    int emptySlot = GetFirstEmptySlot();
+                    if (emptySlot >= 0)
+                    {
+                        slots[emptySlot] = selectedDecorItem.CreateInventoryItem();
+                        Destroy(selectedDecorItem.gameObject);
+                        DeselectDecorItem();
+                        RefreshCarriedItemVisual();
+                    }
+                    else
+                    {
+                        ShowWarning("Túi đồ đã đầy, không thể thu hồi!");
+                    }
+                }
+                // PHÍM F: DI CHUYỂN (Chuyển thành Hologram để đặt lại)
+                else if (keyboard.fKey.wasPressedThisFrame)
+                {
+                    // Lấy đồ nhét ngay vào ô trống đang chọn
+                    slots[selectedSlot] = selectedDecorItem.CreateInventoryItem();
+                    Destroy(selectedDecorItem.gameObject);
+                    DeselectDecorItem();
+                    RefreshCarriedItemVisual();
+                    // Ngay lập tức Hologram sẽ hiện ra vì slot[selectedSlot] giờ đã có đồ!
+                }
+            }
+            return;
+        }
+
+        // ==========================================
+        // TRƯỜNG HỢP 2: TAY ĐANG CẦM ĐỒ -> ĐẶT ĐỒ (Logic cũ)
+        // ==========================================
+        DeselectDecorItem(); // Đang cầm đồ trên tay thì không được phép highlight cái khác
+
+        if (Camera.main == null || mouse == null) return;
+
+        if (placementPreview == null || previewedItem != item)
+        {
+            RebuildPlacementPreview(item);
+        }
+        placementPreview.SetActive(true);
+
+        UpdatePlacementRotation();
+
+        Vector2 mousePos = mouse.position.ReadValue();
+        Ray decorRay = Camera.main.ScreenPointToRay(mousePos);
+        LayerMask mask = AquariumDecorationMode.Instance.GetPlacementMask();
+
+        bool isHit = Physics.Raycast(decorRay, out RaycastHit placeHit, 10f, mask, QueryTriggerInteraction.Ignore);
+        bool isValidPlacement = isHit && !IsWaterBucket(item.Name) && !IsEmptyBucket(item.Name);
+
+        bool isFish = false;
+        if (item.DropPrefab != null && item.DropPrefab.GetComponentInChildren<FishSwim>(true) != null) isFish = true;
+        else if (item.SceneTemplate != null && item.SceneTemplate.GetComponentInChildren<FishSwim>(true) != null) isFish = true;
+        else if (item.Name.ToLower().Contains("fish") || item.Name.ToLower().Contains("cá") || item.Name.ToLower().Contains("ca")) isFish = true;
+
+        if (isHit)
+        {
+            placementPreview.transform.position = placeHit.point;
+            Quaternion yawRotation = Quaternion.AngleAxis(placementYaw, Vector3.up);
+
+            if (!isFish)
+            {
+                Quaternion alignToSurface = Quaternion.FromToRotation(Vector3.up, placeHit.normal);
+                placementPreview.transform.rotation = alignToSurface * yawRotation * item.BaseRotation;
+            }
+            else
+            {
+                placementPreview.transform.rotation = yawRotation * item.BaseRotation;
+            }
+
+            float bottomOffset = GetBottomOffset(placementPreview);
+            placementPreview.transform.position = placeHit.point + placeHit.normal * bottomOffset;
+
+            Collider tankVolume = AquariumDecorationMode.Instance.GetPlacementVolume();
+            if (tankVolume != null && isValidPlacement)
+            {
+                Bounds itemBounds = GetTotalBounds(placementPreview);
+                Bounds tankBounds = tankVolume.bounds;
+                tankBounds.Expand(0.02f);
+
+                bool isInsideX = itemBounds.min.x >= tankBounds.min.x && itemBounds.max.x <= tankBounds.max.x;
+                bool isInsideZ = itemBounds.min.z >= tankBounds.min.z && itemBounds.max.z <= tankBounds.max.z;
+                bool isInsideY = itemBounds.max.y <= tankBounds.max.y + 0.1f;
+
+                if (!isInsideX || !isInsideZ || !isInsideY)
+                {
+                    isValidPlacement = false;
+                }
+            }
+
+            if (isValidPlacement)
+            {
+                SetPreviewColor(item.Color, 0.45f);
+                if (mouse.leftButton.wasPressedThisFrame)
+                {
+                    PlaceItemAtDecor(item, isFish);
+                }
+            }
+            else
+            {
+                SetPreviewColor(Color.red, 0.6f);
+                if (mouse.leftButton.wasPressedThisFrame)
+                {
+                    ShowWarning("Vật phẩm bị chạm vào kính hoặc không hợp lệ!");
+                }
+            }
+        }
+        else
+        {
+            SetPreviewColor(Color.red, 0.6f);
+            if (mouse.leftButton.wasPressedThisFrame)
+            {
+                ShowWarning("Hãy chỉ chuột vào mặt đáy bên trong bể cá!");
+            }
+        }
+    }
+
+    private void PlaceItemAtDecor(InventoryItem item, bool isFish)
+    {
+        // Lấy chính xác vị trí và góc quay của Hologram hiện tại
+        Vector3 placePosition = placementPreview.transform.position;
+        Quaternion placeRotation = placementPreview.transform.rotation;
+
+        GameObject placedObj = item.DropPrefab != null
+            ? Instantiate(item.DropPrefab, placePosition, placeRotation)
+            : item.SceneTemplate != null
+                ? Instantiate(item.SceneTemplate, placePosition, placeRotation)
+                : GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+        placedObj.SetActive(true);
+        placedObj.name = item.Name;
+
+        if (isFish)
+        {
+            FishSwim swim = placedObj.GetComponentInChildren<FishSwim>(true);
+            if (swim != null)
+            {
+                Collider tankCol = AquariumDecorationMode.Instance.GetComponentInChildren<Collider>();
+                if (tankCol != null) swim.waterCollider = tankCol;
+            }
+            Rigidbody rb = placedObj.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+        }
+        else
+        {
+            Rigidbody rb = placedObj.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+        }
+
+        InventoryPickupItem pickup = placedObj.GetComponent<InventoryPickupItem>();
+        if (pickup == null) pickup = placedObj.AddComponent<InventoryPickupItem>();
+        pickup.Configure(item.Name, item.Color, item.DropPrefab);
+
+        // Xóa đồ khỏi Hotbar
+        slots[selectedSlot] = null;
+        RefreshCarriedItemVisual();
+
+        // Ẩn Hologram đi vì ô chứa đồ đã trống
+        if (placementPreview != null) placementPreview.SetActive(false);
+    }
+
+    private void SetPreviewColor(Color c, float alpha)
+    {
+        if (previewMaterial != null)
+        {
+            Color color = c;
+            color.a = alpha;
+            if (previewMaterial.HasProperty("_BaseColor"))
+            {
+                previewMaterial.SetColor("_BaseColor", color);
+            }
+            else
+            {
+                previewMaterial.color = color;
+            }
+        }
+    }
+
+    private void SelectDecorItem(InventoryPickupItem item)
+    {
+        DeselectDecorItem(); // Bỏ chọn cái cũ (nếu có)
+        if (item == null) return;
+
+        selectedDecorItem = item;
+
+        // Quét tất cả Mesh và đổi màu sang Xanh lơ (Cyan)
+        foreach (Renderer r in item.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r.material.HasProperty("_BaseColor"))
+            {
+                originalDecorColors[r] = r.material.GetColor("_BaseColor");
+                r.material.SetColor("_BaseColor", Color.cyan);
+            }
+            else if (r.material.HasProperty("_Color"))
+            {
+                originalDecorColors[r] = r.material.color;
+                r.material.color = Color.cyan;
+            }
+        }
+    }
+
+    private void DeselectDecorItem()
+    {
+        if (selectedDecorItem != null)
+        {
+            // Trả lại toàn bộ màu gốc đã lưu
+            foreach (var kvp in originalDecorColors)
+            {
+                if (kvp.Key != null)
+                {
+                    if (kvp.Key.material.HasProperty("_BaseColor")) kvp.Key.material.SetColor("_BaseColor", kvp.Value);
+                    else if (kvp.Key.material.HasProperty("_Color")) kvp.Key.material.color = kvp.Value;
+                }
+            }
+            originalDecorColors.Clear();
+            selectedDecorItem = null;
+        }
+    }
+
     private Vector3 GetFloorPosition()
     {
         Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
@@ -449,51 +747,72 @@ public sealed class SimpleInventory : MonoBehaviour
     {
         if (obj == null) return 0f;
 
-        MeshFilter[] filters = obj.GetComponentsInChildren<MeshFilter>(true);
-        if (filters.Length > 0)
-        {
-            float minLocalY = float.MaxValue;
-            foreach (MeshFilter mf in filters)
-            {
-                if (mf.sharedMesh == null) continue;
-                Bounds localBounds = mf.sharedMesh.bounds;
-                Vector3 localMin = new Vector3(localBounds.center.x, localBounds.min.y, localBounds.center.z);
-                Vector3 worldMin = mf.transform.TransformPoint(localMin);
-                Vector3 rootLocalMin = obj.transform.InverseTransformPoint(worldMin);
-                
-                if (rootLocalMin.y < minLocalY)
-                {
-                    minLocalY = rootLocalMin.y;
-                }
-            }
+        // Ép Unity cập nhật lại transform trước khi đo đạc
+        Physics.SyncTransforms();
 
-            if (minLocalY != float.MaxValue)
+        // Đo bằng Renderer (độ chính xác hiển thị cao nhất)
+        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length > 0)
+        {
+            Bounds bounds = renderers[0].bounds;
+            foreach (Renderer r in renderers)
             {
-                return -minLocalY;
+                bounds.Encapsulate(r.bounds);
             }
+            // Khoảng cách từ tâm vật thể đến điểm thấp nhất của nó
+            return obj.transform.position.y - bounds.min.y;
         }
 
+        // Nếu vật không có hình ảnh (chỉ có Collider)
         Collider[] colliders = obj.GetComponentsInChildren<Collider>(true);
         if (colliders.Length > 0)
         {
-            float minLocalY = float.MaxValue;
-            foreach (Collider col in colliders)
+            Bounds bounds = colliders[0].bounds;
+            foreach (Collider c in colliders)
             {
-                Bounds localBounds = col.bounds;
-                Vector3 worldMin = new Vector3(localBounds.center.x, localBounds.min.y, localBounds.center.z);
-                Vector3 rootLocalMin = obj.transform.InverseTransformPoint(worldMin);
-                if (rootLocalMin.y < minLocalY)
-                {
-                    minLocalY = rootLocalMin.y;
-                }
+                bounds.Encapsulate(c.bounds);
             }
-            if (minLocalY != float.MaxValue)
-            {
-                return -minLocalY;
-            }
+            return obj.transform.position.y - bounds.min.y;
         }
 
         return 0f;
+    }
+
+    private Bounds GetTotalBounds(GameObject obj)
+    {
+        // Ép Unity cập nhật Transform ngay lập tức để đo chính xác
+        Physics.SyncTransforms();
+
+        Bounds bounds = new Bounds(obj.transform.position, Vector3.zero);
+        bool hasBounds = false;
+
+        // Ưu tiên đo bằng hình ảnh (Mesh)
+        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length > 0)
+        {
+            bounds = renderers[0].bounds;
+            foreach (Renderer r in renderers)
+            {
+                bounds.Encapsulate(r.bounds);
+            }
+            hasBounds = true;
+        }
+
+        // Nếu không có Mesh, đo bằng Collider
+        if (!hasBounds)
+        {
+            Collider[] colliders = obj.GetComponentsInChildren<Collider>(true);
+            if (colliders.Length > 0)
+            {
+                bounds = colliders[0].bounds;
+                foreach (Collider c in colliders)
+                {
+                    bounds.Encapsulate(c.bounds);
+                }
+            }
+        }
+
+        return bounds;
     }
 
     private Quaternion GetDropRotation(InventoryItem item)
@@ -717,7 +1036,7 @@ public sealed class SimpleInventory : MonoBehaviour
         Vector3 floorPos = GetFloorPosition();
         placementPreview.transform.rotation = GetDropRotation(item);
         placementPreview.transform.position = floorPos;
-        
+
         float bottomOffset = GetBottomOffset(placementPreview);
         placementPreview.transform.position = floorPos + Vector3.up * bottomOffset;
 
@@ -734,19 +1053,7 @@ public sealed class SimpleInventory : MonoBehaviour
             }
         }
 
-        if (previewMaterial != null)
-        {
-            Color color = item.Color;
-            color.a = 0.45f;
-            if (previewMaterial.HasProperty("_BaseColor"))
-            {
-                previewMaterial.SetColor("_BaseColor", color);
-            }
-            else
-            {
-                previewMaterial.color = color;
-            }
-        }
+        SetPreviewColor(item.Color, 0.45f);
     }
 
     private void RebuildPlacementPreview(InventoryItem item)
@@ -904,6 +1211,34 @@ public sealed class SimpleInventory : MonoBehaviour
             warningStyle.normal.textColor = Color.red;
             GUI.Box(rect, warningMessage, warningStyle);
         }
+
+        if (AquariumDecorationMode.IsDecorationMode)
+        {
+            const float w = 620f;
+            const float h = 36f;
+            Rect decorRect = new((Screen.width - w) * 0.5f, 40f, w, h);
+            GUIStyle decorStyle = new GUIStyle(slotStyle);
+
+            string instructions = "";
+
+            if (slots[selectedSlot] != null)
+            {
+                decorStyle.normal.textColor = Color.cyan;
+                instructions = "DECORATION MODE: Chuột trái để đặt đồ | Ấn G để thoát";
+            }
+            else if (selectedDecorItem != null)
+            {
+                decorStyle.normal.textColor = Color.yellow;
+                instructions = $"ĐÃ CHỌN: {selectedDecorItem.ItemName} | [X] Thu hồi | [F] Di chuyển | Chuột trái để hủy";
+            }
+            else
+            {
+                decorStyle.normal.textColor = Color.white;
+                instructions = "Tay đang trống. Click chuột trái vào đồ vật trong bể để chọn | Ấn G để thoát";
+            }
+
+            GUI.Box(decorRect, instructions, decorStyle);
+        }
     }
 
     private void DrawDebugHUD()
@@ -970,6 +1305,8 @@ public sealed class SimpleInventory : MonoBehaviour
 
     private void DrawPrompt()
     {
+        if (AquariumDecorationMode.IsDecorationMode) return;
+
         string prompt = nearestPickup != null
             ? $"{pickupPrompt}: {nearestPickup.ItemName}"
             : slots[selectedSlot] != null
