@@ -66,6 +66,11 @@ public sealed class SimpleInventory : MonoBehaviour
             return;
         }
 
+        if (AquariumDecorationMode.IsTransitioning)
+        {
+            return;
+        }
+
         CacheNearestPickup();
 
         Keyboard keyboard = Keyboard.current;
