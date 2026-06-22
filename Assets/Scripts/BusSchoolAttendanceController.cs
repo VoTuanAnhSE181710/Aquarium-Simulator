@@ -292,4 +292,24 @@ public sealed class BusSchoolAttendanceController : MonoBehaviour
             padding = new RectOffset(16, 16, 10, 10)
         };
     }
+
+    // --- THÊM PHẦN NÀY VÀO CUỐI FILE ---
+    public void GetAttendanceData(out int absence, out int failed, out int dayKey, out bool attended, out bool processed)
+    {
+        absence = absenceCountInCurrentSubject;
+        failed = failedSubjectCount;
+        dayKey = attendanceDayKey;
+        attended = attendedToday;
+        processed = processedAbsenceToday;
+    }
+
+    public void SetAttendanceData(int absence, int failed, int dayKey, bool attended, bool processed)
+    {
+        absenceCountInCurrentSubject = absence;
+        failedSubjectCount = failed;
+        attendanceDayKey = dayKey;
+        attendedToday = attended;
+        processedAbsenceToday = processed;
+        gameOver = failedSubjectCount >= failedSubjectsToLose;
+    }
 }

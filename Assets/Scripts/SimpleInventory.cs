@@ -1573,4 +1573,39 @@ public sealed class SimpleInventory : MonoBehaviour
         bool isBucket = lower.Contains("xô") || lower.Contains("xo") || lower.Contains("bucket");
         return isBucket && !IsWaterBucket(name);
     }
+
+    // --- THÊM PHẦN NÀY VÀO CUỐI FILE ---
+    public List<InventorySlotData> GetInventoryData()
+    {
+        List<InventorySlotData> list = new List<InventorySlotData>();
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] != null)
+            {
+                InventorySlotData data = new InventorySlotData();
+                data.itemName = slots[i].Name;
+                data.colorR = slots[i].Color.r; data.colorG = slots[i].Color.g;
+                data.colorB = slots[i].Color.b; data.colorA = slots[i].Color.a;
+                data.slotIndex = i;
+                list.Add(data);
+            }
+        }
+        return list;
+    }
+
+    public void SetInventoryData(List<InventorySlotData> savedSlots, GameSaveManager saveManager)
+    {
+        for (int i = 0; i < slots.Length; i++) slots[i] = null; // Xóa túi cũ
+
+        foreach (var data in savedSlots)
+        {
+            if (data.slotIndex >= 0 && data.slotIndex < slots.Length)
+            {
+                GameObject prefab = saveManager.GetPrefabByName(data.itemName);
+                Color c = new Color(data.colorR, data.colorG, data.colorB, data.colorA);
+                slots[data.slotIndex] = new InventoryItem(data.itemName, c, prefab);
+            }
+        }
+        RefreshCarriedItemVisual();
+    }
 }

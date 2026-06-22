@@ -7,14 +7,16 @@ public class PauseMenuManager : MonoBehaviour
     public static bool GameIsPaused = false;
 
     [Header("Giao diện UI")]
-    public GameObject pauseMenuUI;   // Kéo Panel chứa nút Tiếp tục, Cài đặt, Thoát vào đây
-    public GameObject settingsMenuUI; // Kéo Panel chứa Slider âm lượng vào đây
+    public GameObject pauseMenuUI;    // Kéo Panel Pause vào đây
+    public GameObject settingsMenuUI; // Kéo Panel Settings vào đây
+    public GameObject saveLoadMenuUI; // THÊM MỚI: Kéo SaveLoadPanel vào đây
 
     void Start()
     {
         // Đảm bảo khi bắt đầu game, các menu này đều ẩn đi
-        pauseMenuUI.SetActive(false);
-        settingsMenuUI.SetActive(false);
+        if (pauseMenuUI != null) pauseMenuUI.SetActive(false);
+        if (settingsMenuUI != null) settingsMenuUI.SetActive(false);
+        if (saveLoadMenuUI != null) saveLoadMenuUI.SetActive(false);
     }
 
     void Update()
@@ -24,11 +26,17 @@ public class PauseMenuManager : MonoBehaviour
         {
             if (GameIsPaused)
             {
-                // Nếu đang ở trong Settings, bấm ESC sẽ quay lại Pause Menu thay vì Resume luôn
-                if (settingsMenuUI.activeSelf)
+                // Nếu đang ở Settings, bấm ESC quay lại Pause Menu
+                if (settingsMenuUI != null && settingsMenuUI.activeSelf)
                 {
                     CloseSettings();
                 }
+                // THÊM MỚI: Nếu đang ở bảng Save/Load, bấm ESC quay lại Pause Menu
+                else if (saveLoadMenuUI != null && saveLoadMenuUI.activeSelf)
+                {
+                    CloseSaveLoadMenu();
+                }
+                // Nếu chỉ đang ở Pause Menu bình thường, bấm ESC thì Resume
                 else
                 {
                     Resume();
@@ -44,8 +52,9 @@ public class PauseMenuManager : MonoBehaviour
     // Hàm cho nút "Tiếp tục"
     public void Resume()
     {
-        pauseMenuUI.SetActive(false);
-        settingsMenuUI.SetActive(false);
+        if (pauseMenuUI != null) pauseMenuUI.SetActive(false);
+        if (settingsMenuUI != null) settingsMenuUI.SetActive(false);
+        if (saveLoadMenuUI != null) saveLoadMenuUI.SetActive(false); // Dọn dẹp sạch sẽ
 
         // Khôi phục thời gian
         Time.timeScale = 1f;
@@ -59,7 +68,7 @@ public class PauseMenuManager : MonoBehaviour
     // Hàm gọi khi tạm dừng
     void Pause()
     {
-        pauseMenuUI.SetActive(true);
+        if (pauseMenuUI != null) pauseMenuUI.SetActive(true);
 
         // Đóng băng thời gian
         Time.timeScale = 0f;
@@ -73,15 +82,22 @@ public class PauseMenuManager : MonoBehaviour
     // Hàm cho nút "Cài đặt"
     public void OpenSettings()
     {
-        pauseMenuUI.SetActive(false); // Ẩn menu chính
-        settingsMenuUI.SetActive(true); // Hiện menu cài đặt
+        if (pauseMenuUI != null) pauseMenuUI.SetActive(false);
+        if (settingsMenuUI != null) settingsMenuUI.SetActive(true);
     }
 
     // Hàm cho nút "Quay lại" ở trong bảng Cài đặt
     public void CloseSettings()
     {
-        settingsMenuUI.SetActive(false);
-        pauseMenuUI.SetActive(true);
+        if (settingsMenuUI != null) settingsMenuUI.SetActive(false);
+        if (pauseMenuUI != null) pauseMenuUI.SetActive(true);
+    }
+
+    // THÊM MỚI: Hàm để ESC tự đóng bảng Save/Load
+    private void CloseSaveLoadMenu()
+    {
+        if (saveLoadMenuUI != null) saveLoadMenuUI.SetActive(false);
+        if (pauseMenuUI != null) pauseMenuUI.SetActive(true);
     }
 
     // Hàm cho nút "Thoát game"
@@ -94,10 +110,8 @@ public class PauseMenuManager : MonoBehaviour
     // Hàm này tự động chạy khi người chơi chuyển cửa sổ (Alt+Tab) hoặc click ra ngoài
     private void OnApplicationFocus(bool hasFocus)
     {
-        // hasFocus = true nghĩa là người chơi vừa Alt+Tab quay trở lại game
         if (hasFocus)
         {
-            // Kiểm tra: Nếu quay lại mà game KHÔNG ĐANG PAUSE thì khóa chuột lại
             if (!GameIsPaused)
             {
                 Cursor.lockState = CursorLockMode.Locked;
@@ -106,8 +120,6 @@ public class PauseMenuManager : MonoBehaviour
         }
         else
         {
-            // hasFocus = false nghĩa là người chơi vừa Alt+Tab ra ngoài
-            // [MẸO NÂNG CAO]: Ép game tự động bật Pause Menu khi người chơi tab ra ngoài
             if (!GameIsPaused)
             {
                 Pause();

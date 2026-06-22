@@ -318,4 +318,13 @@ public sealed class HouseLightSwitchController : MonoBehaviour
         Rect promptRect = new((Screen.width - width) * 0.5f, Screen.height - 190f, width, height);
         GUI.Box(promptRect, promptText, promptStyle);
     }
+
+    // --- THÊM PHẦN NÀY VÀO CUỐI FILE ---
+    public bool LightsOn => lightsOn;
+
+    public void SetLightState(bool on)
+    {
+        lightsOn = on;
+        ApplyLightState();
+    }
 }

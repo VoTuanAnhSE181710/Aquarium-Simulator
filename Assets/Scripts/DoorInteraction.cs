@@ -187,4 +187,16 @@ public sealed class DoorInteraction : MonoBehaviour
             player = minh.transform;
         }
     }
+
+    // --- THÊM PHẦN NÀY VÀO CUỐI FILE ---
+    public bool IsOpen => isOpen;
+
+    public void SetOpenState(bool open)
+    {
+        isOpen = open;
+        if (rotationPivot != null)
+        {
+            rotationPivot.localRotation = isOpen ? openRotation : closedRotation;
+        }
+    }
 }

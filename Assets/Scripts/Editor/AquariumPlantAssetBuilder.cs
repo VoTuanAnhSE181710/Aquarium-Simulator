@@ -4,30 +4,39 @@ using UnityEngine;
 
 public static class AquariumPlantAssetBuilder
 {
-    private const string AssetFolder = "Assets/Aquarium/HomeTankPlants";
-    [MenuItem("Tools/Tạo Cây Thủy Sinh (Build Plants)")]
+    // --- KHAI BÁO 2 THƯ MỤC RIÊNG BIỆT ---
+    private const string PrefabFolder = "Assets/Resources";
+    private const string MaterialFolder = "Assets/Aquarium/Materials";
 
+    [MenuItem("Tools/Tạo Cây Thủy Sinh (Build Plants)")]
     public static void Build()
     {
-        Directory.CreateDirectory(AssetFolder);
+        // Tạo sẵn 2 thư mục nếu chưa có
+        Directory.CreateDirectory(PrefabFolder);
+        Directory.CreateDirectory(MaterialFolder);
 
+        // Tạo Material và lưu vào thư mục Materials
         Material leafDark = CreateMaterial("MAT_AquariumPlant_DarkGreen", new Color(0.08f, 0.45f, 0.18f));
         Material leafLight = CreateMaterial("MAT_AquariumPlant_LightGreen", new Color(0.18f, 0.72f, 0.32f));
         Material leafRed = CreateMaterial("MAT_AquariumPlant_RedGreen", new Color(0.44f, 0.18f, 0.22f));
         Material stem = CreateMaterial("MAT_AquariumPlant_Stem", new Color(0.07f, 0.28f, 0.12f));
         Material stone = CreateMaterial("MAT_AquariumPlant_StoneBase", new Color(0.38f, 0.34f, 0.30f));
 
+        // Tạo Prefab và lưu vào thư mục Resources
         SavePrefab(BuildGrassCluster(leafLight, stem, stone), "AquaticPlant_GrassCluster");
         SavePrefab(BuildBroadLeaf(leafDark, stem, stone), "AquaticPlant_BroadLeaf");
         SavePrefab(BuildRedStem(leafRed, stem, stone), "AquaticPlant_RedStem");
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+
+        Debug.Log("Đã tạo xong! Prefab nằm ở Resources, Material nằm ở Aquarium/Materials");
     }
 
     private static Material CreateMaterial(string name, Color color)
     {
-        string path = $"{AssetFolder}/{name}.mat";
+        // --- SỬA Ở ĐÂY: Lưu vào MaterialFolder ---
+        string path = $"{MaterialFolder}/{name}.mat";
         Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (existing != null)
         {
@@ -57,6 +66,16 @@ public static class AquariumPlantAssetBuilder
         AssetDatabase.CreateAsset(material, path);
         return material;
     }
+
+    private static void SavePrefab(GameObject root, string name)
+    {
+        // --- SỬA Ở ĐÂY: Lưu vào PrefabFolder ---
+        string path = $"{PrefabFolder}/{name}.prefab";
+        PrefabUtility.SaveAsPrefabAsset(root, path);
+        Object.DestroyImmediate(root);
+    }
+
+    // --- CÁC HÀM XÂY DỰNG MÔ HÌNH (GIỮ NGUYÊN) ---
 
     private static GameObject BuildGrassCluster(Material leaf, Material stem, Material stone)
     {
@@ -140,14 +159,13 @@ public static class AquariumPlantAssetBuilder
         InventoryPickupItem pickup = root.AddComponent<InventoryPickupItem>();
         pickup.Configure(name, new Color(0.18f, 0.72f, 0.32f), null);
 
-        // --- THÊM ĐOẠN NÀY: Khống chế BoxCollider do InventoryPickupItem tự sinh ra ---
+        // Khống chế BoxCollider
         BoxCollider autoCol = root.GetComponent<BoxCollider>();
         if (autoCol != null)
         {
-            autoCol.size = new Vector3(0.01f, 0.01f, 0.01f); // Thu nhỏ bé tí hon
-            autoCol.enabled = false; // Tắt luôn để không cản đường tia chuột
+            autoCol.size = new Vector3(0.01f, 0.01f, 0.01f);
+            autoCol.enabled = false;
         }
-        // -----------------------------------------------------------------------------
 
         return root;
     }
@@ -165,17 +183,8 @@ public static class AquariumPlantAssetBuilder
         part.name = name;
         part.transform.SetParent(parent, false);
 
-        // ĐÃ GIỮ LẠI COLLIDER CHO TỪNG CÀNH/LÁ BẰNG CÁCH XÓA DÒNG Object.DestroyImmediate
-
         Renderer renderer = part.GetComponent<Renderer>();
         renderer.sharedMaterial = material;
         return part;
-    }
-
-    private static void SavePrefab(GameObject root, string name)
-    {
-        string path = $"{AssetFolder}/{name}.prefab";
-        PrefabUtility.SaveAsPrefabAsset(root, path);
-        Object.DestroyImmediate(root);
     }
 }

@@ -843,5 +843,82 @@ public sealed class FishTankWaterQuality : MonoBehaviour
             }
         }
     }
+
+    // --- THÊM PHẦN NÀY VÀO CUỐI FILE ---
+    public void GetWaterData(out float clean, out float oxy, out float chlor, out bool aerator)
+    {
+        clean = Cleanliness; oxy = Oxygen; chlor = Chlorine; aerator = IsAeratorOn;
+    }
+
+    public void SetWaterData(float clean, float oxy, float chlor, bool aerator)
+    {
+        Cleanliness = clean; Oxygen = oxy; Chlorine = chlor; IsAeratorOn = aerator;
+        UpdateAeratorVisuals();
+    }
+
+    public List<PlacedObjectData> GetAllPlacedObjects()
+    {
+        List<PlacedObjectData> list = new List<PlacedObjectData>();
+        if (waterCollider == null) return list;
+
+        InventoryPickupItem[] allItems = FindObjectsByType<InventoryPickupItem>(FindObjectsSortMode.None);
+        foreach (var item in allItems)
+        {
+            if (waterCollider.bounds.Contains(item.transform.position)) // Đang nằm trong bể
+            {
+                PlacedObjectData data = new PlacedObjectData();
+                data.itemName = item.ItemName;
+                data.posX = item.transform.position.x; data.posY = item.transform.position.y; data.posZ = item.transform.position.z;
+                data.rotX = item.transform.rotation.x; data.rotY = item.transform.rotation.y;
+                data.rotZ = item.transform.rotation.z; data.rotW = item.transform.rotation.w;
+
+                Renderer r = item.GetComponentInChildren<Renderer>();
+                if (r != null)
+                {
+                    Color c = r.material.HasProperty("_BaseColor") ? r.material.GetColor("_BaseColor") : r.material.color;
+                    data.colorR = c.r; data.colorG = c.g; data.colorB = c.b; data.colorA = c.a;
+                }
+                list.Add(data);
+            }
+        }
+        return list;
+    }
+
+    public void ClearAndRestorePlacedObjects(List<PlacedObjectData> savedObjects, GameSaveManager saveManager)
+    {
+        if (waterCollider == null) return;
+
+        // 1. Dọn dẹp bể cá (Xóa sạch cây cỏ tự sinh lúc Start)
+        InventoryPickupItem[] allItems = FindObjectsByType<InventoryPickupItem>(FindObjectsSortMode.None);
+        foreach (var item in allItems)
+        {
+            if (waterCollider.bounds.Contains(item.transform.position)) Destroy(item.gameObject);
+        }
+
+        // 2. Spawn lại đồ đạc từ file Save
+        foreach (var data in savedObjects)
+        {
+            GameObject prefab = saveManager.GetPrefabByName(data.itemName);
+            Vector3 pos = new Vector3(data.posX, data.posY, data.posZ);
+            Quaternion rot = new Quaternion(data.rotX, data.rotY, data.rotZ, data.rotW);
+
+            GameObject obj = prefab != null ? Instantiate(prefab, pos, rot) : GameObject.CreatePrimitive(PrimitiveType.Cube);
+            if (prefab == null) { obj.transform.position = pos; obj.transform.rotation = rot; obj.transform.localScale = Vector3.one * 0.35f; }
+            obj.name = data.itemName;
+            obj.SetActive(true);
+
+            Renderer r = obj.GetComponentInChildren<Renderer>();
+            Color c = new Color(data.colorR, data.colorG, data.colorB, data.colorA);
+            if (r != null) { if (r.material.HasProperty("_BaseColor")) r.material.SetColor("_BaseColor", c); else r.material.color = c; }
+
+            InventoryPickupItem pickup = obj.GetComponent<InventoryPickupItem>();
+            if (pickup == null) pickup = obj.AddComponent<InventoryPickupItem>();
+            pickup.Configure(data.itemName, c, prefab);
+
+            // Cấp lại nước cho cá bơi
+            FishSwim swim = obj.GetComponentInChildren<FishSwim>(true);
+            if (swim != null) { swim.waterCollider = waterCollider; Rigidbody rb = obj.GetComponent<Rigidbody>(); if (rb) { rb.isKinematic = true; rb.useGravity = false; } }
+        }
+    }
 #endif
 }
