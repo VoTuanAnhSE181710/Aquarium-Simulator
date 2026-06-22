@@ -115,12 +115,11 @@ public sealed class NpcPatrolStraight : MonoBehaviour
     {
         Vector3 rayOrigin = transform.position + Vector3.up * 0.5f;
 
-        // Vẽ tia Raycast trong tab Scene để bạn dễ hình dung khoảng cách 3 mét
-        Debug.DrawRay(rayOrigin, transform.forward * obstacleCheckDistance, Color.red);
+        // Debug.DrawRay(rayOrigin, heading * obstacleCheckDistance, Color.red);
 
         return Physics.Raycast(
             rayOrigin,
-            transform.forward,
+            heading,
             obstacleCheckDistance,
             obstacleMask,
             QueryTriggerInteraction.Ignore);

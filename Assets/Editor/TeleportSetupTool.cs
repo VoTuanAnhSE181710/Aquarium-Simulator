@@ -71,7 +71,7 @@ public class TeleportSetupTool : EditorWindow
             destA = destAGo.transform;
             destA.SetParent(objB.transform);
             // Đặt lệch ra trước mặt một chút
-            destA.localPosition = new Vector3(0, 0, 1.2f); 
+            destA.localPosition = new Vector3(0, 0.5f, 2.5f);
             destA.localRotation = Quaternion.identity;
         }
 
@@ -84,7 +84,7 @@ public class TeleportSetupTool : EditorWindow
             destB = destBGo.transform;
             destB.SetParent(objA.transform);
             // Đặt lệch ra trước mặt một chút
-            destB.localPosition = new Vector3(0, 0, 1.2f);
+            destB.localPosition = new Vector3(0, 0.5f, 2.0f);
             destB.localRotation = Quaternion.identity;
         }
 

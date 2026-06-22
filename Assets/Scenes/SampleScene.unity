@@ -1093,7 +1093,7 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 06a0b05995a968a42b9af8ce62957de3, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 34496230}
+      addedObject: {fileID: 34496232}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 06a0b05995a968a42b9af8ce62957de3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 34496229}
@@ -1247,7 +1247,7 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
---- !u!114 &34496230
+--- !u!114 &34496232
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1256,18 +1256,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 34496223}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
   moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
   obstacleMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  gravity: -20
+  waitTime: 3
   walkingSpeedThreshold: 0.05
   walkingReleaseGraceTime: 0.08
 --- !u!1 &35386934
@@ -8279,7 +8278,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5dc17d9e63454e3499687d77ded15ca4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TeleportPortal
-  destination: {fileID: 422322356}
+  destination: {fileID: 663154622}
   interactionDistance: 1.5
   promptMessage: "Nh\u1EA5n F \u0111\u1EC3 v\xE0o c\u1EEDa h\xE0ng"
   teleportSound: {fileID: 0}
@@ -15990,7 +15989,7 @@ PrefabInstance:
     - target: {fileID: 6489423343753847538, guid: 8cc7e5359c1f1c04a903f234b6da7844, type: 3}
       propertyPath: destination
       value: 
-      objectReference: {fileID: 422322356}
+      objectReference: {fileID: 663154622}
     - target: {fileID: 6493334560855187339, guid: 8cc7e5359c1f1c04a903f234b6da7844, type: 3}
       propertyPath: m_CastShadows
       value: 0
@@ -17599,11 +17598,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 5575985040723181610, guid: 9129719056845bc4186f2f9fd109fd34, type: 3}
---- !u!4 &422322356 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 12518668407110020, guid: afebfe67f5a6877479f91b30696505a2, type: 3}
-  m_PrefabInstance: {fileID: 562772519}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &424920028
 GameObject:
   m_ObjectHideFlags: 0
@@ -19077,6 +19071,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 5294326514039849804, guid: 6a68f72f65e63fb4ea9df839cabf4af8, type: 3}
+      propertyPath: m_Name
+      value: FishStoreGoInDoor
+      objectReference: {fileID: 0}
     - target: {fileID: 5353895423828852983, guid: 6a68f72f65e63fb4ea9df839cabf4af8, type: 3}
       propertyPath: m_LocalScale.x
       value: 2.077788
@@ -19135,7 +19133,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4770131439527614966, guid: 6a68f72f65e63fb4ea9df839cabf4af8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1728315520}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 5294326514039849804, guid: 6a68f72f65e63fb4ea9df839cabf4af8, type: 3}
       insertIndex: -1
@@ -20327,10 +20328,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 684b1575c0824b947ba83c9418b90a1a, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 495913074}
+      addedObject: {fileID: 495913076}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 684b1575c0824b947ba83c9418b90a1a, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 495913073}
+      addedObject: {fileID: 495913074}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 684b1575c0824b947ba83c9418b90a1a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 495913072}
@@ -20456,29 +20457,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &495913073
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 495913067}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &495913074
 CharacterController:
   m_ObjectHideFlags: 0
@@ -20504,6 +20482,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &495913076
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 495913067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
+  moveSpeed: 1.4
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  waitTime: 3
+  walkingSpeedThreshold: 0.05
+  walkingReleaseGraceTime: 0.08
 --- !u!1 &497848397
 GameObject:
   m_ObjectHideFlags: 0
@@ -20933,10 +20933,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 12fec07daa224b24385950fd73969072, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 507777507}
+      addedObject: {fileID: 507777509}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 12fec07daa224b24385950fd73969072, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 507777506}
+      addedObject: {fileID: 507777507}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 12fec07daa224b24385950fd73969072, type: 3}
       insertIndex: -1
       addedObject: {fileID: 507777505}
@@ -21062,29 +21062,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &507777506
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 507777500}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &507777507
 CharacterController:
   m_ObjectHideFlags: 0
@@ -21110,6 +21087,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &507777509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 507777500}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
+  moveSpeed: 1.4
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  waitTime: 3
+  walkingSpeedThreshold: 0.05
+  walkingReleaseGraceTime: 0.08
 --- !u!1001 &508055450
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23141,7 +23140,7 @@ PrefabInstance:
     - target: {fileID: 4121252018869605464, guid: afebfe67f5a6877479f91b30696505a2, type: 3}
       propertyPath: destination
       value: 
-      objectReference: {fileID: 1684113393}
+      objectReference: {fileID: 1728315520}
     - target: {fileID: 5339545739395897693, guid: afebfe67f5a6877479f91b30696505a2, type: 3}
       propertyPath: destination
       value: 
@@ -23196,7 +23195,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 9163470274236102819, guid: afebfe67f5a6877479f91b30696505a2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 663154622}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 4016645504243989447, guid: afebfe67f5a6877479f91b30696505a2, type: 3}
       insertIndex: -1
@@ -24323,6 +24325,11 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -3362887337151679087, guid: 27dce3121239de942aaf980c61b74f3e, type: 3}
+--- !u!4 &567848764 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9163470274236102819, guid: afebfe67f5a6877479f91b30696505a2, type: 3}
+  m_PrefabInstance: {fileID: 562772519}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &568110852 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1374519441930534279, guid: ed896fdf3cfbdb04581a6af3a1a4ed92, type: 3}
@@ -27963,6 +27970,37 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 8733429697405204941, guid: 9129719056845bc4186f2f9fd109fd34, type: 3}
+--- !u!1 &663154621
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 663154622}
+  m_Layer: 0
+  m_Name: FishStoreGoInSpawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &663154622
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 663154621}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -0.00867}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 567848764}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &663899030
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -28584,10 +28622,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c8c212a8276076e4f9b49437011b273f, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 681084359}
+      addedObject: {fileID: 681084361}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c8c212a8276076e4f9b49437011b273f, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 681084358}
+      addedObject: {fileID: 681084359}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c8c212a8276076e4f9b49437011b273f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 681084357}
@@ -28713,29 +28751,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &681084358
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 681084352}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &681084359
 CharacterController:
   m_ObjectHideFlags: 0
@@ -28761,6 +28776,19 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &681084361
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 681084352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbdade9d4b04e254f9819e87227c2aae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcStationary
+  gravity: -20
 --- !u!1 &681145325 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -362155105099926554, guid: 9129719056845bc4186f2f9fd109fd34, type: 3}
@@ -31596,10 +31624,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 57c6733a7b0221e4d862bb9f52c2afd7, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 718781244}
+      addedObject: {fileID: 718781246}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 57c6733a7b0221e4d862bb9f52c2afd7, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 718781243}
+      addedObject: {fileID: 718781244}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 57c6733a7b0221e4d862bb9f52c2afd7, type: 3}
       insertIndex: -1
       addedObject: {fileID: 718781242}
@@ -31725,29 +31753,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &718781243
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 718781237}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &718781244
 CharacterController:
   m_ObjectHideFlags: 0
@@ -31773,6 +31778,19 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &718781246
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 718781237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbdade9d4b04e254f9819e87227c2aae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcStationary
+  gravity: -20
 --- !u!1001 &722313246
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -35304,10 +35322,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bb053ffe5f5d1664c9aef54e9231f028, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 802216605}
+      addedObject: {fileID: 802216607}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bb053ffe5f5d1664c9aef54e9231f028, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 802216604}
+      addedObject: {fileID: 802216605}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: bb053ffe5f5d1664c9aef54e9231f028, type: 3}
       insertIndex: -1
       addedObject: {fileID: 802216603}
@@ -35433,29 +35451,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &802216604
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 802216598}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &802216605
 CharacterController:
   m_ObjectHideFlags: 0
@@ -35481,6 +35476,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &802216607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 802216598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
+  moveSpeed: 1.4
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  waitTime: 3
+  walkingSpeedThreshold: 0.05
+  walkingReleaseGraceTime: 0.08
 --- !u!1 &808272964
 GameObject:
   m_ObjectHideFlags: 0
@@ -39785,257 +39802,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300020, guid: 72e643619fa32984785527a0c110a313, type: 3}
---- !u!1001 &890737162
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -41.47
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.76
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 13.416764
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.7071068
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0.7071068
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 90
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -7676612043611361953, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: 'm_Materials.Array.data[0]'
-      value: 
-      objectReference: {fileID: 2100000, guid: 2c20cd37f08b2ee429125a3a4130cae0, type: 2}
-    - target: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      propertyPath: m_Name
-      value: UncleHung
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 890737164}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 890737166}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 890737167}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 890737168}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 890737169}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 890737170}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 890737171}
-  m_SourcePrefab: {fileID: 100100000, guid: e70d5f5055db82345a00256400249fc5, type: 3}
---- !u!1 &890737163 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: e70d5f5055db82345a00256400249fc5, type: 3}
-  m_PrefabInstance: {fileID: 890737162}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &890737164
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 890737163}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
---- !u!143 &890737166
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 890737163}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 1.8
-  m_Radius: 0.35
-  m_SlopeLimit: 50
-  m_StepOffset: 0.315
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0.9, z: 0}
---- !u!114 &890737167
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 890737163}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d64b038b3cd0804291be5c587d4c0b2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ProceduralCharacterMotion
-  strideFrequency: 1.35
-  runStrideMultiplier: 1.45
-  walkSpeedReference: 1.4
-  runSpeedReference: 6.5
-  legSwingAngle: 20
-  armSwingForwardAmount: 0.22
-  armOutwardAmount: 0.08
-  kneeBendAngle: 12
-  breathingAmount: 0.8
-  blendSmoothTime: 0.14
-  speedSmoothTime: 0.1
-  jointSmoothSpeed: 10
---- !u!114 &890737168
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 890737163}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 64f164ff72ac4e748a47a5a1d9f2f4d0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CharacterGroundProbe
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  probeDistance: 0.35
-  probeRadiusPadding: 0.04
-  normalSharpness: 18
---- !u!114 &890737169
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 890737163}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 64963d4d637b2c34390fae735b0a8b87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CharacterAnimatorDriver
-  fullWalkSpeed: 1.4
-  fullRunSpeed: 6.5
-  maxPlaybackSpeed: 1.35
-  dampTime: 0.12
-  hardLandingSpeed: -7
---- !u!114 &890737170
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 890737163}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 62f583e386734c31b0daecad9b9b2603, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HumanoidFootGroundingIK
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  rayHeight: 0.45
-  rayDistance: 1.1
-  footOffset: 0.035
-  maxPelvisAdjustment: 0.18
-  positionWeight: 0.85
-  rotationWeight: 0.65
-  ikSharpness: 20
-  pelvisSharpness: 14
---- !u!95 &890737171
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 890737163}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: a9a33570774a02f408f5a996f17efd31, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &893659061 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -8565181763350941866, guid: 9129719056845bc4186f2f9fd109fd34, type: 3}
@@ -45935,6 +45701,63 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 460342, guid: ccf13c7381ca25349b107bbb9423e1bd, type: 3}
   m_PrefabInstance: {fileID: 981929021}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &982852397
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 8397618883232659150, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_Name
+      value: UncleHung
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.742
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.0394672
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -119.475
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 270
+      objectReference: {fileID: 0}
+    - target: {fileID: 9205785679693458548, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: b6379da8d45fa814b9b63abac2d90d45, type: 3}
 --- !u!1001 &986392669
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -48979,10 +48802,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 07c333aaf8b131545956b50e99578240, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1051465513}
+      addedObject: {fileID: 1051465515}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 07c333aaf8b131545956b50e99578240, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1051465512}
+      addedObject: {fileID: 1051465513}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 07c333aaf8b131545956b50e99578240, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1051465511}
@@ -49108,29 +48931,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1051465512
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1051465506}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1051465513
 CharacterController:
   m_ObjectHideFlags: 0
@@ -49156,6 +48956,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1051465515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1051465506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
+  moveSpeed: 1.4
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  waitTime: 3
+  walkingSpeedThreshold: 0.05
+  walkingReleaseGraceTime: 0.08
 --- !u!1001 &1057290733
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -60504,10 +60326,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b7f6a63587a1cad47b450bf69322dd00, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1361143059}
+      addedObject: {fileID: 1361143061}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b7f6a63587a1cad47b450bf69322dd00, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1361143058}
+      addedObject: {fileID: 1361143059}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b7f6a63587a1cad47b450bf69322dd00, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1361143057}
@@ -60633,29 +60455,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1361143058
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1361143052}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1361143059
 CharacterController:
   m_ObjectHideFlags: 0
@@ -60681,6 +60480,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1361143061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1361143052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
+  moveSpeed: 1.4
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  waitTime: 3
+  walkingSpeedThreshold: 0.05
+  walkingReleaseGraceTime: 0.08
 --- !u!64 &1365685939
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -65422,10 +65243,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7eb79ae267c78174fbb713e5e4d0a46d, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1442398390}
+      addedObject: {fileID: 1442398392}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7eb79ae267c78174fbb713e5e4d0a46d, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1442398389}
+      addedObject: {fileID: 1442398390}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7eb79ae267c78174fbb713e5e4d0a46d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1442398388}
@@ -65551,29 +65372,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1442398389
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1442398383}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1442398390
 CharacterController:
   m_ObjectHideFlags: 0
@@ -65599,6 +65397,19 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1442398392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1442398383}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbdade9d4b04e254f9819e87227c2aae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcStationary
+  gravity: -20
 --- !u!1001 &1444367987
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -71270,20 +71081,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1558887939}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
+  m_Script: {fileID: 11500000, guid: bbdade9d4b04e254f9819e87227c2aae, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
+  m_EditorClassIdentifier: Assembly-CSharp::NpcStationary
   gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!1001 &1559603438
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -71853,10 +71654,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 971751262a66bcf41ba86e4d028712bc, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1571930832}
+      addedObject: {fileID: 1571930834}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 971751262a66bcf41ba86e4d028712bc, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1571930831}
+      addedObject: {fileID: 1571930832}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 971751262a66bcf41ba86e4d028712bc, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1571930830}
@@ -71982,29 +71783,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1571930831
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1571930825}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1571930832
 CharacterController:
   m_ObjectHideFlags: 0
@@ -72030,6 +71808,19 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1571930834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571930825}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbdade9d4b04e254f9819e87227c2aae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcStationary
+  gravity: -20
 --- !u!1 &1574257117
 GameObject:
   m_ObjectHideFlags: 0
@@ -77252,10 +77043,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 41a2f53e35d92cf4c83dcbce25dd343d, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1662737808}
+      addedObject: {fileID: 1662737810}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 41a2f53e35d92cf4c83dcbce25dd343d, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1662737807}
+      addedObject: {fileID: 1662737808}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 41a2f53e35d92cf4c83dcbce25dd343d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1662737806}
@@ -77381,29 +77172,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1662737807
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1662737801}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1662737808
 CharacterController:
   m_ObjectHideFlags: 0
@@ -77429,6 +77197,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1662737810
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1662737801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
+  moveSpeed: 1.4
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  waitTime: 3
+  walkingSpeedThreshold: 0.05
+  walkingReleaseGraceTime: 0.08
 --- !u!1 &1664711723
 GameObject:
   m_ObjectHideFlags: 0
@@ -78149,11 +77939,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: 036c334cb6a05bd4fad2a33b9e2ea03b, type: 3}
---- !u!4 &1684113393 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5353895423828852983, guid: 6a68f72f65e63fb4ea9df839cabf4af8, type: 3}
-  m_PrefabInstance: {fileID: 467366998}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1686530985 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100000, guid: b0ad868427d8c8a4b86144f9786776d3, type: 3}
@@ -78765,10 +78550,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 01e37463f4fa8b34e92e7add44bc8f70, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1694442698}
+      addedObject: {fileID: 1694442700}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 01e37463f4fa8b34e92e7add44bc8f70, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1694442697}
+      addedObject: {fileID: 1694442698}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 01e37463f4fa8b34e92e7add44bc8f70, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1694442696}
@@ -78894,29 +78679,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1694442697
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1694442691}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1694442698
 CharacterController:
   m_ObjectHideFlags: 0
@@ -78942,6 +78704,19 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1694442700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1694442691}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbdade9d4b04e254f9819e87227c2aae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcStationary
+  gravity: -20
 --- !u!1 &1695404462
 GameObject:
   m_ObjectHideFlags: 0
@@ -79924,6 +79699,37 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1724982148}
   m_Mesh: {fileID: -6957020452010348896, guid: 9129719056845bc4186f2f9fd109fd34, type: 3}
+--- !u!1 &1728315519
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1728315520}
+  m_Layer: 0
+  m_Name: FishStoreGoOutSpawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1728315520
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728315519}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -0.00539}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2091636236}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1728357624 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 99d419e4b8812b34a9d9f59c4a778e92, type: 3}
@@ -83371,10 +83177,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4a71d6077e8a743408eda9aa724dcfbf, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1804422869}
+      addedObject: {fileID: 1804422871}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4a71d6077e8a743408eda9aa724dcfbf, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1804422868}
+      addedObject: {fileID: 1804422869}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 4a71d6077e8a743408eda9aa724dcfbf, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1804422867}
@@ -83500,29 +83306,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1804422868
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1804422862}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1804422869
 CharacterController:
   m_ObjectHideFlags: 0
@@ -83548,6 +83331,19 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1804422871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1804422862}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbdade9d4b04e254f9819e87227c2aae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcStationary
+  gravity: -20
 --- !u!1 &1804810201 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -362155105099926554, guid: 9129719056845bc4186f2f9fd109fd34, type: 3}
@@ -90115,10 +89911,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 6d8d041757e4a6e478bc74591e05072a, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1956425633}
+      addedObject: {fileID: 1956425634}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 6d8d041757e4a6e478bc74591e05072a, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1956425632}
+      addedObject: {fileID: 1956425633}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 6d8d041757e4a6e478bc74591e05072a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1956425631}
@@ -90244,29 +90040,6 @@ MonoBehaviour:
   blendSmoothTime: 0.14
   speedSmoothTime: 0.1
   jointSmoothSpeed: 10
---- !u!114 &1956425632
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1956425626}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b737cbaa3e3be14f88ad1092ce283f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NpcWander
-  moveSpeed: 1.4
-  turnSpeed: 180
-  roamRadius: 12
-  directionChangeInterval: 3
-  obstacleCheckDistance: 1.2
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  gravity: -20
-  walkingSpeedThreshold: 0.05
-  walkingReleaseGraceTime: 0.08
 --- !u!143 &1956425633
 CharacterController:
   m_ObjectHideFlags: 0
@@ -90292,6 +90065,28 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &1956425634
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1956425626}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae97aa2c0ba47bf45862af9513e2168b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcPatrolStraight
+  moveSpeed: 1.4
+  turnSpeed: 360
+  gravity: -20
+  obstacleCheckDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  waitTime: 3
+  walkingSpeedThreshold: 0.05
+  walkingReleaseGraceTime: 0.08
 --- !u!1 &1956482350
 GameObject:
   m_ObjectHideFlags: 0
@@ -95035,6 +94830,11 @@ Transform:
   - {fileID: 193871489}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &2091636236 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4770131439527614966, guid: 6a68f72f65e63fb4ea9df839cabf4af8, type: 3}
+  m_PrefabInstance: {fileID: 467366998}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2094051900 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -1807970279642858887, guid: 9129719056845bc4186f2f9fd109fd34, type: 3}
@@ -97060,7 +96860,6 @@ SceneRoots:
   - {fileID: 941884915}
   - {fileID: 1192981640}
   - {fileID: 1488223823}
-  - {fileID: 890737162}
   - {fileID: 527208674}
   - {fileID: 511243478}
   - {fileID: 1591215383}
@@ -97133,3 +96932,4 @@ SceneRoots:
   - {fileID: 1361143051}
   - {fileID: 562772519}
   - {fileID: 353680440}
+  - {fileID: 982852397}
